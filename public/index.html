@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<head>
+  <meta name="viewport" content="width = device-width, initial-scale = 1.0">
+  <title>Koth.IO</title>
+  <script src="/js/tailwindcss.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.1/tinycolor.min.js"></script>
+</head>
+
+<body class="overflow-hidden">
+  <canvas id="ctx" onclick="disableChat()"></canvas>
+  <div class="fixed top-0 left-0 p-2 rounded-br-xl bg-black/50 backdrop-blur-md cursor-pointer" onclick="toggleChat()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" class="w-8 h-8">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+    </svg>
+    <div id="notification" class="hidden">
+      <div class="absolute top-1 right-0 rounded-full w-3 h-3 bg-red-500"></div>
+      <div class="absolute top-1 right-0 rounded-full w-3 h-3 bg-red-500 animate-ping"></div>
+    </div>
+  </div>
+  <div id="chatWindow" class="fixed top-14 bottom-2 left-0 -left-full rounded-r-xl bg-black/50 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col">
+    <div id="messages" class="p-2 overflow-y-scroll overflow-x-hidden text-white"></div>
+    <input type="text" id="input" class="p-2 border-t-2 border-blue-500 focus:outline-none mt-auto" placeholder="Say something..." />
+  </div>
+  <div class="fixed top-0 right-0 rounded-bl-xl bg-black/50 overflow-hidden backdrop-blur-md text-red-300 p-2">
+    <div class="m-2 border-b-2 border-blue-500 font-bold text-lg text-white">Leaderboard</div>
+    <div id="num1" class="px-2 font-bold"></div>
+    <div id="num2" class="px-2 font-bold"></div>
+    <div id="num3" class="px-2 font-bold"></div>
+    <hr class="h-[2px] border-none bg-blue-500 mt-2">
+    <div id="currNum" class="p-2 font-bold text-white"></div>
+  </div>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="/js/script.js"></script>
+</body>
