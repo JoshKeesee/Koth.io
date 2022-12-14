@@ -9,7 +9,7 @@ const gameState = {
   leaderboard: {}
 };
 var defaults = {};
-var clientCount = 0;
+var currUserNum = 0;
 const port = process.env.PORT || 3000;
 
 app.use(express.static(__dirname + "/public"));
@@ -22,20 +22,19 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     delete gameState.players[socket.id];
     delete gameState.leaderboard[socket.id];
-    clientCount--;
   });
 
   socket.on("newPlayer", () => {
-    clientCount++;
+    currUserNum = socket.adapter.sids.size;
     gameState.players[socket.id] = {
-      x: clientCount * 100,
+      x: currUserNum * 100,
       y: 320,
       width: 70,
       height: 70,
       yVel: 0,
       xVel: 0,
       id: socket.id,
-      num: clientCount,
+      num: currUserNum,
       lastTouched: null
     };
 

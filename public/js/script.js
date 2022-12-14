@@ -300,3 +300,7 @@ socket.on("newMessage", (message) => {
 socket.on("add score", (player) => {
   socket.emit("update leaderboard", player);
 });
+
+socket.on("player disconnected", (count) => {
+  socket.emit("player disconnected", count);
+});
