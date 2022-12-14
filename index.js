@@ -25,7 +25,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("newPlayer", () => {
-    currUserNum = socket.adapter.sids.size;
+    if (Object.keys(gameState.players).length !== 0) {
+      currUserNum = gameState.players[Object.keys(gameState.players)[Object.keys(gameState.players).length - 1]].num + 1;
+    } else {
+      currUserNum = 1;
+    }
     gameState.players[socket.id] = {
       x: currUserNum * 100,
       y: 320,
@@ -80,7 +84,11 @@ io.on("connection", (socket) => {
       player.y = -500;
       player.x = 570;
       if (player.lastTouched !== null) {
-        socket.broadcast.emit("add score", player.lastTouched);
+        gameState.leaderboard[player.lastTouched] += 1;
+        gameState.leaderboard = Object.entries(gameState.leaderboard)
+        .sort(([,a],[,b]) => a - b)
+        .reverse()
+        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
         player.lastTouched = null;
       }
     }
@@ -172,14 +180,6 @@ io.on("connection", (socket) => {
 
   socket.on("chat message", (message) => {
     io.emit("newMessage", [gameState.players[socket.id].num, message]);
-  });
-
-  socket.on("update leaderboard", (player) => {
-    gameState.leaderboard[player] += 1;
-    gameState.leaderboard = Object.entries(gameState.leaderboard)
-    .sort(([,a],[,b]) => a - b)
-    .reverse()
-    .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
   });
 
   setInterval(() => {
