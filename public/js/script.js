@@ -3,51 +3,47 @@ const canvas = document.getElementById("ctx");
 const ctx = canvas.getContext("2d");
 var id;
 var chatOpen = -1;
-var leaderboard = [];
+var gameStarted = false;
+var defaults = {};
+var speed = 0;
 
 const playerMovement = {
-  up: false,
-  left: false,
-  right: false,
-  down: false,
-  ctxWidth: ctx.canvas.width,
-  ctxHeight: ctx.canvas.height,
+  u: false,
+  l: false,
+  r: false,
+  d: false,
+  cW: ctx.canvas.width,
+  cH: ctx.canvas.height,
   platforms: []
 };
 
 const keyDownHandler = (e) => {
   if (e.keyCode == 39) {
-   playerMovement.right = true;
+   playerMovement.r = true;
   } else if (e.keyCode == 37) {
-    playerMovement.left = true;
+    playerMovement.l = true;
   } else if (e.keyCode == 38) {
-    playerMovement.up = true;
+    playerMovement.u = true;
   } else if (e.keyCode == 40) {
-    playerMovement.down = true;
+    playerMovement.d = true;
   }
 };
 
 const keyUpHandler = (e) => {
   if (e.keyCode == 39) {
-    playerMovement.right = false;
+    playerMovement.r = false;
   } else if (e.keyCode == 37) {
-    playerMovement.left = false;
+    playerMovement.l = false;
   } else if (e.keyCode == 38) {
-    playerMovement.up = false;
+    playerMovement.u = false;
   } else if (e.keyCode == 40) {
-    playerMovement.down = false;
+    playerMovement.d = false;
   }
 };
 
-const drawPlayer = (player) => {
-  if (player.id === id) {
-    ctx.save();
-    ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.width / 2, -1 * (player.y - ctx.canvas.height / 2) - player.height / 2);
-    drawMap();
-  }
-
+const drawPlayer = (player, leaderboard) => {
   ctx.beginPath();
-  ctx.roundRect(player.x, player.y, player.width, player.height, 15);
+  ctx.roundRect(player.x, player.y, player.w, player.h, 15);
   if (player.num === 1) {
     ctx.fillStyle = "#0095DD";
   } else if (player.num === 2) {
@@ -71,44 +67,100 @@ const drawPlayer = (player) => {
   ctx.closePath();
   
   ctx.beginPath();
-  ctx.roundRect(player.x + (player.width / 5.5), player.y + (player.height / 5.5), player.width / 1.5, player.height / 1.5, 50);
+  ctx.roundRect(player.x + (player.w / 5.5), player.y + (player.h / 5.5), player.w / 1.5, player.h / 1.5, 50);
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
 
   ctx.beginPath();
-  ctx.roundRect((player.x + (player.width / 2.9)) + player.xVel, (player.y + (player.height / 2.9)) + player.yVel, player.width / 3, player.height / 3, 50);
+  ctx.roundRect((player.x + (player.w / 2.9)) + player.xVel, (player.y + (player.h / 2.9)) + player.yVel, player.w / 3, player.h / 3, 50);
   ctx.fillStyle = "black";
   ctx.fill();
   ctx.closePath();
 
   ctx.beginPath();
-  ctx.roundRect((player.x + (player.width / 1.9)) + player.xVel, (player.y + (player.height / 2.6)) + player.yVel, player.width / 10, player.height / 10, 50);
+  ctx.roundRect((player.x + (player.w / 1.9)) + player.xVel, (player.y + (player.h / 2.6)) + player.yVel, player.w / 10, player.h / 10, 50);
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
 
-  ctx.fillStyle = "rgba(255, 255, 255, " + (player.height + 30) / 100 + ")";
-  ctx.font = "bold 30px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("Player " + player.num, player.x + (player.width / 2), player.y - 10);
+  if (Object.keys(leaderboard)[0] === player.id && leaderboard[Object.keys(leaderboard)[0]] > 0 && leaderboard[Object.keys(leaderboard)[0]] !== leaderboard[Object.keys(leaderboard)[1]]) {
+    ctx.beginPath();
+    ctx.moveTo(player.x + 1, player.y - 20);
+    ctx.lineTo(player.x + 1, player.y);
+    ctx.lineTo(player.x + 20, player.y);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.moveTo(player.x + (player.w / 2) - 20, player.y);
+    ctx.lineTo(player.x + (player.w / 2), player.y - 30);
+    ctx.lineTo(player.x + (player.w / 2) + 20, player.y);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.moveTo(player.x + player.w - 1, player.y - 20);
+    ctx.lineTo(player.x + player.w - 1, player.y);
+    ctx.lineTo(player.x + player.w - 20, player.y);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.roundRect(player.x - 4, player.y - 24, 8, 8, 8);
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.roundRect(player.x + (player.w / 2) - 6, player.y - 34, 12, 12, 12);
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.roundRect(player.x + player.w - 6, player.y - 24, 8, 8, 8);
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.closePath();
+    
+    ctx.beginPath();
+    ctx.roundRect(player.x - 1, player.y - 1, player.w + 2, player.h / 5, 4);
+    ctx.fillStyle = tinycolor("yellow").darken(5);
+    ctx.fill();
+    ctx.closePath();
+
+    if (player.name != null) {
+      ctx.fillStyle = "rgba(0, 0, 150, " + (player.h + 30) / 100 + ")";
+      ctx.font = "bold 30px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(player.name, player.x + (player.w / 2), player.y - 40);
+    }
+  } else if (player.name !== null) {
+    ctx.fillStyle = "rgba(0, 0, 150, " + (player.h + 30) / 100 + ")";
+    ctx.font = "bold 30px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(player.name, player.x + (player.w / 2), player.y - 10);
+  }
 
   if (player.id !== id) {
     var left = player.x;
     var top = player.y;
-    var width = player.width;
-    var height = player.height;
+    var width = player.w;
+    var height = player.h;
     createObject(left, top, width, height, "player", null , player.id);
   }
 };
 
-socket.emit("newPlayer");
 socket.on("id", (socketId) => {
   id = socketId;
 });
 
 function movePlayer() {
-  socket.emit("playerMovement", playerMovement);
+  socket.emit("playerMovement", [playerMovement, defaults, speed]);
 }
 
 document.addEventListener("keydown", keyDownHandler, false);
@@ -117,13 +169,13 @@ document.addEventListener("keyup", keyUpHandler, false);
 function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
   var length = playerMovement.platforms.length;
   playerMovement.platforms[length] = {};
-  playerMovement.platforms[length].top = t;
-  playerMovement.platforms[length].left = l;
-  playerMovement.platforms[length].width = w;
-  playerMovement.platforms[length].height = h;
+  playerMovement.platforms[length].t = t;
+  playerMovement.platforms[length].l = l;
+  playerMovement.platforms[length].w = w;
+  playerMovement.platforms[length].h = h;
   playerMovement.platforms[length].type = type;
-  playerMovement.platforms[length].right = l + w;
-  playerMovement.platforms[length].bottom = t + h;
+  playerMovement.platforms[length].r = l + w;
+  playerMovement.platforms[length].b = t + h;
   playerMovement.platforms[length].playerId = playerId;
 
   if (type === "platform") {
@@ -200,7 +252,8 @@ function createCloud(x, y) {
 }
 
 function drawMap() {
-  createObject(100, 500, 1000, 200, "platform", "#000cfa");
+  createObject(100, 500, 400, 200, "platform", "#000cfa");
+  createObject(700, 500, 400, 200, "platform", "#000cfa");
   createObject(200, 250, 100, 50, "platform", "yellow");
   createObject(550, 250, 100, 50, "platform", "green");
   createObject(900, 250, 100, 50, "platform", "red");
@@ -227,23 +280,65 @@ function drawScenery(x, y) {
   createBush(725, 450);
 }
 
+function go() {
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("chat").classList.replace("-left-full", "left-0");
+  var name = document.getElementById("name").value;
+  document.getElementById("gameMusic").play();
+  gameStarted = true;
+
+  defaults.speed = 1;
+  defaults.jumps = 1;
+  defaults.padding = 1;
+  defaults.force = 2;
+
+  if (document.getElementById("speed").classList.contains("-translate-y-2")) {
+    defaults.speed = 1.5;
+  } else if (document.getElementById("jumps").classList.contains("-translate-y-2")) {
+    defaults.jumps = 2;
+  } else if (document.getElementById("padding").classList.contains("-translate-y-2")) {
+    defaults.padding = 0.1;
+  } else if (document.getElementById("force").classList.contains("-translate-y-2")) {
+    defaults.force = 4;
+  }
+
+  speed = defaults.speed;
+  
+  socket.emit("newPlayer", name);
+}
+
 socket.on("state", (gameState) => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
-  playerMovement.ctxWidth = ctx.canvas.width;
-  playerMovement.ctxHeight = ctx.canvas.height;
+  playerMovement.cW = ctx.canvas.width;
+  playerMovement.cH = ctx.canvas.height;
   playerMovement.platforms = [];
-  
-  drawPlayer(gameState.players[id]);
+
+  if (gameStarted) {
+    ctx.save();
+    var player = gameState.players[id];
+    ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
+    drawMap();
+    drawPlayer(player, gameState.leaderboard);
+  } else {
+    ctx.save();
+    ctx.scale(0.8, 0.8);
+    ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
+    drawMap();
+  }
   
   for (let i = 0; i < Object.keys(gameState.players).length; i++) {
-    if (gameState.players[Object.keys(gameState.players)[i]].id !== id) {
-        drawPlayer(gameState.players[Object.keys(gameState.players)[i]]);
+    if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
+        drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
     }
   }
 
-  drawScenery(gameState.players[id].x, gameState.players[id].y);
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) {
+    drawScenery(gameState.players[id].x, gameState.players[id].y);
+  } else {
+    drawScenery(canvas.width / 2, canvas.height / 2);
+  }
 
   ctx.restore();
   ctx.beginPath();
@@ -254,28 +349,38 @@ socket.on("state", (gameState) => {
   ctx.closePath();
   
   for (var i = 0; i < 3; i++) {
-    document.getElementById("num" + (i + 1)).innerHTML = "";
+    document.getElementById("name" + (i + 1)).innerHTML = "";
   }
   
   for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
-    document.getElementById("num" + (i + 1)).innerHTML = i + 1 + ") Player " + gameState.players[Object.keys(gameState.leaderboard)[i]].num + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
+    document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
   }
 
-  document.getElementById("currNum").innerHTML = "You) " + gameState.leaderboard[id];
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) {
+    document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
+  } else {
+    document.getElementById("currName").innerHTML = "";
+  }
 
   setTimeout(movePlayer, 0);
 });
 
-function toggleChat() {
-  document.getElementById("chatWindow").classList.toggle("-left-full");
+function enableChat() {
+  document.getElementById("chatWindow").classList.replace("-left-full", "left-0");
   document.getElementById("notification").classList.add("hidden");
-  chatOpen = chatOpen * -1;
+  chatOpen = 1;
+  document.getElementById("chat").onclick = () => {
+    disableChat();
+  }
 }
 
 function disableChat() {
-  document.getElementById("chatWindow").classList.add("-left-full");
+  document.getElementById("chatWindow").classList.replace("left-0", "-left-full");
   document.getElementById("notification").classList.add("hidden");
   chatOpen = -1;
+  document.getElementById("chat").onclick = () => {
+    enableChat();
+  }
 }
 
 document.getElementById("input").addEventListener("keydown", (e) => {
@@ -286,9 +391,16 @@ document.getElementById("input").addEventListener("keydown", (e) => {
   e.preventDefault;
 });
 
+document.getElementById("name").addEventListener("keydown", (e) => {
+  if (e.keyCode == 13) {
+    go();
+  }
+  e.preventDefault;
+});
+
 socket.on("newMessage", (message) => {
   var div = document.createElement("div");
-  div.innerHTML = "<div class='font-bold'>Player " + message[0] + "</div><div>" + message[1] + "</div><hr class='my-4 h-px border-none bg-gray-300'>";
+  div.innerHTML = "<div class='font-bold'>" + message[0] + "</div><div>" + message[1] + "</div><hr class='my-4 h-px border-none bg-gray-300'>";
   div.classList = "break-words w-54";
   document.getElementById("messages").appendChild(div);
   if (chatOpen < 0) {
@@ -301,6 +413,10 @@ socket.on("add score", (player) => {
   socket.emit("update leaderboard", player);
 });
 
-socket.on("player disconnected", (count) => {
-  socket.emit("player disconnected", count);
-});
+function choose(powerup) {
+  document.getElementById("speed").classList.remove("-translate-y-2");
+  document.getElementById("jumps").classList.remove("-translate-y-2");
+  document.getElementById("padding").classList.remove("-translate-y-2");
+  document.getElementById("force").classList.remove("-translate-y-2");
+  document.getElementById(powerup).classList.add("-translate-y-2");
+}

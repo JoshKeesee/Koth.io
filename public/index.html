@@ -4,11 +4,26 @@
   <title>Koth.IO</title>
   <script src="/js/tailwindcss.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.1/tinycolor.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Spray+Paint&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rubik+Spray+Paint&display=swap');
+    body {
+      font-family: 'Rubik Spray Paint', cursive;
+    }
+    ::-webkit-scrollbar {
+      width: 0;
+    }
+  </style>
 </head>
 
 <body class="overflow-hidden">
   <canvas id="ctx" onclick="disableChat()"></canvas>
-  <div class="fixed top-0 left-0 p-2 rounded-br-xl bg-black/50 backdrop-blur-md cursor-pointer" onclick="toggleChat()">
+  <audio id="gameMusic">
+    <source src="/music/Game Music.mp3"></source>
+  </audio>
+  <div id="chat" class="fixed top-0 -left-full p-2 rounded-br-xl bg-black/50 backdrop-blur-md cursor-pointer" onclick="enableChat()">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" class="w-8 h-8">
       <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
     </svg>
@@ -17,17 +32,40 @@
       <div class="absolute top-1 right-0 rounded-full w-3 h-3 bg-red-500 animate-ping"></div>
     </div>
   </div>
-  <div id="chatWindow" class="fixed top-14 bottom-2 left-0 -left-full rounded-r-xl bg-black/50 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col">
+  <div id="chatWindow" class="fixed top-14 bottom-2 -left-full rounded-r-xl bg-black/50 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col font-sans">
     <div id="messages" class="p-2 overflow-y-scroll overflow-x-hidden text-white"></div>
     <input type="text" id="input" class="p-2 border-t-2 border-blue-500 focus:outline-none mt-auto" placeholder="Say something..." />
   </div>
-  <div class="fixed top-0 right-0 rounded-bl-xl bg-black/50 overflow-hidden backdrop-blur-md text-red-300 p-2">
+  <div id="leaderboard" class="fixed top-0 right-0 rounded-bl-xl bg-black/50 overflow-hidden backdrop-blur-md text-red-300 p-2 font-sans">
     <div class="m-2 border-b-2 border-blue-500 font-bold text-lg text-white">Leaderboard</div>
-    <div id="num1" class="px-2 font-bold"></div>
-    <div id="num2" class="px-2 font-bold"></div>
-    <div id="num3" class="px-2 font-bold"></div>
+    <div id="name1" class="px-2 font-bold"></div>
+    <div id="name2" class="px-2 font-bold"></div>
+    <div id="name3" class="px-2 font-bold"></div>
     <hr class="h-[2px] border-none bg-blue-500 mt-2">
-    <div id="currNum" class="p-2 font-bold text-white"></div>
+    <div id="currName" class="p-2 font-bold text-white"></div>
+  </div>
+  <div id="menu" class="fixed top-0 left-0 right-0 bottom-0 bg-black/50">
+    <div id="main" class="relative lg:top-1/2 md:top-1/2 top-1/2 left-[50%] w-fit transform translate-x-[-50%] translate-y-[-50%] bg-black/90 p-4 rounded-xl text-white text-3xl tracking-wide font-thin text-center">
+      <div class="mb-2 border-b-2 border-blue-500 pb-1">King of the Hill</div>
+      <div class="font-sans font-normal text-lg flex space-x-2 mx-auto">
+        <input id="name" type="text" placeholder="Enter your name..." class="text-center p-1 rounded-xl border-2 border-blue-500 text-black focus:outline-none focus:ring-2 transition-all" autofocus maxlength="10" />
+        <button onclick="go()" class="font-bold p-2 bg-blue-500 hover:scale-110 transition-all rounded-xl">Play</button>
+      </div>
+    </div>
+    <div id="powerups" class="grid lg:grid-cols-4 md:grid-cols-4 grid-cols-2 lg:gap-4 md:gap-4 gap-2 relative left-[50%] -mt-24 w-fit translate-x-[-50%] text-white text-center text-2xl font-sans font-bold">
+      <div id="speed" class="rounded-xl bg-blue-500 p-4 cursor-pointer border-b-4 border-blue-700 transform -translate-y-2 transition-all" onclick="choose(this.id)">
+        <div>Speed</div>
+      </div>
+      <div id="jumps" class="rounded-xl bg-red-500 p-4 cursor-pointer border-b-4 border-red-700 transform transition-all" onclick="choose(this.id)">
+        Double Jump
+      </div>
+      <div id="padding" class="rounded-xl bg-green-500 p-4 cursor-pointer border-b-4 border-green-700 transform transition-all" onclick="choose(this.id)">
+        Xtra Padding
+      </div>
+      <div id="force" class="rounded-xl bg-yellow-500 p-4 cursor-pointer border-b-4 border-yellow-700 transform transition-all" onclick="choose(this.id)">
+        Hit Force
+      </div>
+    </div>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/script.js"></script>
