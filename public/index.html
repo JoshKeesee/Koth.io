@@ -2,7 +2,7 @@
 <head>
   <meta name="viewport" content="width = device-width, initial-scale = 1.0">
   <title>Koth.IO</title>
-  <script src="/js/tailwindcss.js"></script>
+  <link href="/dist/output.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.1/tinycolor.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,7 @@
 
 <body class="overflow-hidden">
   <canvas id="ctx" onclick="disableChat()"></canvas>
-  <audio id="gameMusic">
+  <audio id="gameMusic" loop>
     <source src="/music/Game Music.mp3"></source>
   </audio>
   <div id="chat" class="fixed top-0 -left-full p-2 rounded-br-xl bg-black/50 backdrop-blur-md cursor-pointer" onclick="enableChat()">
@@ -45,24 +45,25 @@
     <div id="currName" class="p-2 font-bold text-white"></div>
   </div>
   <div id="menu" class="fixed top-0 left-0 right-0 bottom-0 bg-black/50">
-    <div id="main" class="relative lg:top-1/2 md:top-1/2 top-1/2 left-[50%] w-fit transform translate-x-[-50%] translate-y-[-50%] bg-black/90 p-4 rounded-xl text-white text-3xl tracking-wide font-thin text-center">
+    <div id="main" class="relative lg:top-1/2 md:top-1/2 top-1/2 left-[50%] w-fit transform translate-x-[-50%] translate-y-[-50%] bg-black/90 px-4 py-2 rounded-xl text-white text-3xl tracking-wide font-thin text-center">
       <div class="mb-2 border-b-2 border-blue-500 pb-1">King of the Hill</div>
       <div class="font-sans font-normal text-lg flex space-x-2 mx-auto">
         <input id="name" type="text" placeholder="Enter your name..." class="text-center p-1 rounded-xl border-2 border-blue-500 text-black focus:outline-none focus:ring-2 transition-all" autofocus maxlength="10" />
-        <button onclick="go()" class="font-bold p-2 bg-blue-500 hover:scale-110 transition-all rounded-xl">Play</button>
+        <button id="play" onclick="go()" class="font-bold p-2 bg-blue-500 hover:scale-110 transition-all rounded-xl">Play</button>
       </div>
+      <div id="disconnected" class="text-red-500 font-black text-lg font-sans mt-2 hidden">Connection lost...</div>
     </div>
-    <div id="powerups" class="grid lg:grid-cols-4 md:grid-cols-4 grid-cols-2 lg:gap-4 md:gap-4 gap-2 relative left-[50%] -mt-24 w-fit translate-x-[-50%] text-white text-center text-2xl font-sans font-bold">
-      <div id="speed" class="rounded-xl bg-blue-500 p-4 cursor-pointer border-b-4 border-blue-700 transform -translate-y-2 transition-all" onclick="choose(this.id)">
+    <div id="powerups" class="grid lg:grid-cols-4 md:grid-cols-4 grid-cols-2 lg:gap-4 md:gap-4 gap-2 relative left-[50%] -mt-24 w-fit translate-x-[-50%] text-white text-center lg:text-2xl md:text-lg text-md font-sans font-bold">
+      <div id="speed" class="rounded-xl bg-blue-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-blue-700 transform -translate-y-2 transition-all" onclick="choose(this.id)">
         <div>Speed</div>
       </div>
-      <div id="jumps" class="rounded-xl bg-red-500 p-4 cursor-pointer border-b-4 border-red-700 transform transition-all" onclick="choose(this.id)">
+      <div id="jumps" class="rounded-xl bg-red-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-red-700 transform transition-all" onclick="choose(this.id)">
         Double Jump
       </div>
-      <div id="padding" class="rounded-xl bg-green-500 p-4 cursor-pointer border-b-4 border-green-700 transform transition-all" onclick="choose(this.id)">
+      <div id="padding" class="rounded-xl bg-green-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-green-700 transform transition-all" onclick="choose(this.id)">
         Xtra Padding
       </div>
-      <div id="force" class="rounded-xl bg-yellow-500 p-4 cursor-pointer border-b-4 border-yellow-700 transform transition-all" onclick="choose(this.id)">
+      <div id="force" class="rounded-xl bg-yellow-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-yellow-700 transform transition-all" onclick="choose(this.id)">
         Hit Force
       </div>
     </div>

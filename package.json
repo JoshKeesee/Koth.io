@@ -19,13 +19,8 @@
   "homepage": "https://github.com/JoshKeesee/Koth.IO#readme",
   "dependencies": {
     "@socket.io/admin-ui": "^0.5.1",
-    "bufferutil": "^4.0.7",
-    "eiows": "^4.1.2",
     "express": "^4.18.2",
-    "socket.io": "^4.5.4",
-    "socket.io-client": "^4.5.4",
-    "socket.io-msgpack-parser": "^3.0.2",
-    "utf-8-validate": "^5.0.10",
-    "ws": "^8.11.0"
+    "serve-favicon": "^2.5.0",
+    "socket.io": "^4.5.4"
   }
 }

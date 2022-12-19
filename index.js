@@ -1,5 +1,7 @@
 const express = require("express");
 const app = express();
+const path = require('path');
+const favicon = require('serve-favicon')
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { instrument } = require("@socket.io/admin-ui");
@@ -11,6 +13,7 @@ const io = new Server(httpServer, {
   },
   maxHttpBufferSize: 3e7
 });
+
 instrument(io, {
   auth: false,
   mode: "development",
@@ -26,6 +29,7 @@ var playerNum = 0;
 const port = process.env.PORT || 3000;
 
 app.use(express.static(__dirname + "/public"));
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
@@ -35,9 +39,14 @@ io.on("connection", (socket) => {
   gameState.players[socket.id] = {
     name: null
   };
-  socket.emit("id", socket.id);
   
   socket.on("disconnect", () => {
+    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+      if (gameState.players[Object.keys(gameState.players)[i]].lt === socket.id) {
+        gameState.players[Object.keys(gameState.players)[i]].lt = null;
+      }
+    }
+    
     delete gameState.players[socket.id];
     delete gameState.leaderboard[socket.id];
   });
@@ -65,7 +74,10 @@ io.on("connection", (socket) => {
       pps: 100,
       jumps: 0,
       jumping: false,
-      speed: 0
+      speed: 0,
+      pushForce: 2,
+      knockback: 1,
+      touching: false
     };
 
     gameState.leaderboard[socket.id] = 0;
@@ -77,15 +89,17 @@ io.on("connection", (socket) => {
     defaults = {
       gravity: 0.4,
       resistance: 0.9,
-      knockback: data[1].padding,
       speed: data[1].speed,
-      pushForce: data[1].force,
       maxJumps: data[1].jumps,
       jumpForce: 15
     };
     
     const player = gameState.players[socket.id];
     player.speed = data[2];
+    player.pushForce = data[1].force;
+    player.knockback = data[1].padding;
+    player.touching = false;
+    
     if (playerMovement.l) {
       player.xVel -= defaults.speed;
     }
@@ -95,15 +109,19 @@ io.on("connection", (socket) => {
     }
 
     if (playerMovement.d) {
-      player.h += 0.2 * (35 - player.h);
-      player.w += 0.2 * (90 - player.w);
-      defaults.speed = player.speed + 0.1;
-      defaults.gravity = 0.6;
+      if (!playerMovement.flying) {
+        player.h += 0.2 * (35 - player.h);
+        player.w += 0.2 * (90 - player.w);
+        defaults.speed = player.speed + 0.1;
+        defaults.gravity = 0.6;
+      }
     } else {
-      player.h += 0.2 * (70 - player.h);
-      player.w += 0.2 * (70 - player.w);
-      defaults.speed = player.speed;
-      defaults.gravity = 0.4
+      if (!playerMovement.flying) {
+        player.h += 0.2 * (70 - player.h);
+        player.w += 0.2 * (70 - player.w);
+        defaults.speed = player.speed;
+        defaults.gravity = 0.4;
+      }
     }
 
     const g = 1000 - player.h;
@@ -136,12 +154,13 @@ io.on("connection", (socket) => {
       if (player.x + player.w > left) {
         if (player.x + player.w < left + (width / 2) && player.y < bottom - (height / 2) && player.y > top - player.h + (height / 2)) {
           if (type === "player") {
+            player.touching = true;
             if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-              gameState.players[playerId].xVel = player.xVel * defaults.pushForce;
+              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
               player.xVel = 0 - (player.xVel * defaults.resistance);
               player.yVel = 0;
             } else {
-              player.xVel = (gameState.players[playerId].xVel * defaults.pushForce) * defaults.knockback;
+              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
             }
             gameState.players[playerId].lt = player.id;
           } else {
@@ -156,12 +175,13 @@ io.on("connection", (socket) => {
       if (player.x < right) {
         if (player.x > right - (width / 2) && player.y < bottom - (height / 2) && player.y > top - player.h + (height / 2)) {
           if (type === "player") {
+            player.touching = true;
             if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-              gameState.players[playerId].xVel = player.xVel * defaults.pushForce;
+              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
               player.xVel = 0 - (player.xVel * defaults.resistance);
               player.yVel = 0;
             } else {
-              player.xVel = (gameState.players[playerId].xVel * defaults.pushForce) * defaults.knockback;
+              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
             }
             gameState.players[playerId].lt = player.id;
           } else {
@@ -176,6 +196,7 @@ io.on("connection", (socket) => {
       if (player.y > top - player.h - 2) {
         if (player.x < right && player.y < top - player.h + (height / 2) - 2 && player.x + player.w > left) {
           if (type === "player") {
+            player.touching = true;
             player.yVel = 0 - (player.yVel * 0.8);
             gameState.players[playerId].lt = player.id;
             if (playerMovement.u) {
@@ -192,7 +213,8 @@ io.on("connection", (socket) => {
       if (player.y < bottom) {
         if (player.x < right && player.y > bottom - (height / 2) && player.x + player.w > left) {
           if (type === "player") {
-            gameState.players[playerId].yVel = (player.yVel * defaults.pushForce) * defaults.knockback;
+            player.touching = true;
+            gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
             gameState.players[playerId].lt = player.id;
             player.yVel = 1;
           } else {
@@ -207,16 +229,31 @@ io.on("connection", (socket) => {
       player.jumping = false;
     }
     
-    if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping) {
+    if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping && !playerMovement.flying) {
       player.jumping = true;
       player.jumps++;
       player.yVel = -defaults.jumpForce;
     }
+
+    if (!playerMovement.flying) {
+      player.yVel += defaults.gravity;
+    }
+
+    if (playerMovement.flying && playerMovement.u) {
+      player.yVel -= player.speed;
+    }
+
+    if (playerMovement.flying && playerMovement.d) {
+      player.yVel += player.speed;
+    }
+
+    if (playerMovement.flying) {
+      player.yVel *= defaults.resistance;
+    }
     
-    player.yVel += defaults.gravity;
     player.xVel *= defaults.resistance;
-    player.y += Math.round(player.yVel * 10) / 10;
-    player.x += Math.round(player.xVel * 10) / 10;
+    player.y += player.yVel;
+    player.x += player.xVel;
 
     var playerNums = [];
 

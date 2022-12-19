@@ -6,38 +6,48 @@ var chatOpen = -1;
 var gameStarted = false;
 var defaults = {};
 var speed = 0;
+var devMode = false;
+var connected = false;
+var lastJumpVal;
 
 const playerMovement = {
   u: false,
   l: false,
   r: false,
   d: false,
+  flying: false,
   cW: ctx.canvas.width,
   cH: ctx.canvas.height,
   platforms: []
 };
 
 const keyDownHandler = (e) => {
-  if (e.keyCode == 39) {
-   playerMovement.r = true;
-  } else if (e.keyCode == 37) {
+  if (e.key == "ArrowRight") {
+    playerMovement.r = true;
+  } else if (e.key == "ArrowLeft") {
     playerMovement.l = true;
-  } else if (e.keyCode == 38) {
+  } else if (e.key == "ArrowUp") {
     playerMovement.u = true;
-  } else if (e.keyCode == 40) {
+  } else if (e.key == "ArrowDown") {
     playerMovement.d = true;
   }
 };
 
 const keyUpHandler = (e) => {
-  if (e.keyCode == 39) {
+  if (e.key == "ArrowRight") {
     playerMovement.r = false;
-  } else if (e.keyCode == 37) {
+  } else if (e.key == "ArrowLeft") {
     playerMovement.l = false;
-  } else if (e.keyCode == 38) {
+  } else if (e.key == "ArrowUp") {
     playerMovement.u = false;
-  } else if (e.keyCode == 40) {
+  } else if (e.key == "ArrowDown") {
     playerMovement.d = false;
+  } else if (e.key == "Escape" && devMode) {
+    if (playerMovement.flying === false) {
+      playerMovement.flying = true;
+    } else {
+      playerMovement.flying = false;
+    }
   }
 };
 
@@ -65,7 +75,7 @@ const drawPlayer = (player, leaderboard) => {
   }
   ctx.fill();
   ctx.closePath();
-  
+
   ctx.beginPath();
   ctx.roundRect(player.x + (player.w / 5.5), player.y + (player.h / 5.5), player.w / 1.5, player.h / 1.5, 50);
   ctx.fillStyle = "white";
@@ -126,7 +136,7 @@ const drawPlayer = (player, leaderboard) => {
     ctx.fillStyle = "red";
     ctx.fill();
     ctx.closePath();
-    
+
     ctx.beginPath();
     ctx.roundRect(player.x - 1, player.y - 1, player.w + 2, player.h / 5, 4);
     ctx.fillStyle = tinycolor("yellow").darken(5);
@@ -151,15 +161,53 @@ const drawPlayer = (player, leaderboard) => {
     var top = player.y;
     var width = player.w;
     var height = player.h;
-    createObject(left, top, width, height, "player", null , player.id);
+    createObject(left, top, width, height, "player", null, player.id);
+  } else {
+    if (player.jumping && lastJumpVal !== player.jumping) {
+      lastJumpVal = player.jumping;
+      var jump = new Audio("/music/Jump.wav");
+      jump.play();
+    } else {
+      lastJumpVal = player.jumping;
+    }
+
+    if (player.touching) {
+      var bounce = new Audio("/music/Bounce.mp3");
+      bounce.play();
+    }
   }
 };
 
-socket.on("id", (socketId) => {
-  id = socketId;
+socket.on("connect", () => {
+  id = socket.id;
+  connected = true;
+  document.getElementById("play").onclick = () => {
+    go();
+  };
+  document.getElementById("play").classList.remove("cursor-not-allowed");
+      document.getElementById("disconnected").classList.add("hidden");
 });
 
-function movePlayer() {
+socket.on("disconnect", () => {
+  document.getElementById("menu").classList.remove("hidden");
+    document.getElementById("disconnected").classList.remove("hidden");
+  connected = false;
+  document.getElementById("play").onclick = () => {};
+      document.getElementById("play").classList.add("cursor-not-allowed");
+  document.getElementById("chat").classList.replace("left-0", "-left-full");
+  document.getElementById("gameMusic").pause();
+  document.getElementById("gameMusic").currentTime = 0;
+  gameStarted = false;
+
+  defaults.speed = 1;
+  defaults.jumps = 1;
+  defaults.padding = 1;
+  defaults.force = 2;
+
+  devMode = false;
+});
+
+function sendData() {
   socket.emit("playerMovement", [playerMovement, defaults, speed]);
 }
 
@@ -186,7 +234,7 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
       ctx.fill();
       ctx.closePath();
     }
-    
+
     ctx.beginPath();
     ctx.roundRect(l, t, w, h, 4);
     ctx.fillStyle = color;
@@ -199,19 +247,19 @@ function createBush(x, y) {
   var grd = ctx.createLinearGradient(x, y + 50, x, y);
   grd.addColorStop(0, "green");
   grd.addColorStop(1, "rgb(0, 200, 0)");
-  
+
   ctx.beginPath();
   ctx.roundRect(x, y - 1, 50, 50, 50);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
-  
+
   ctx.beginPath();
   ctx.roundRect(x + 40, y - 12 - 1, 50, 50, 50);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
-  
+
   ctx.beginPath();
   ctx.roundRect(x + 80, y - 1, 50, 50, 50);
   ctx.fillStyle = grd;
@@ -231,13 +279,13 @@ function createCloud(x, y) {
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
-  
+
   ctx.beginPath();
   ctx.roundRect(x + 80, y - 20, 100, 100, 100);
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
-  
+
   ctx.beginPath();
   ctx.roundRect(x + 160, y, 100, 100, 100);
   ctx.fillStyle = "white";
@@ -281,7 +329,10 @@ function drawScenery(x, y) {
 }
 
 function go() {
+  var start = new Audio("/music/start.mp3");
+  start.play();
   document.getElementById("menu").classList.add("hidden");
+      document.getElementById("disconnected").classList.add("hidden");
   document.getElementById("chat").classList.replace("-left-full", "left-0");
   var name = document.getElementById("name").value;
   document.getElementById("gameMusic").play();
@@ -297,12 +348,17 @@ function go() {
   } else if (document.getElementById("jumps").classList.contains("-translate-y-2")) {
     defaults.jumps = 2;
   } else if (document.getElementById("padding").classList.contains("-translate-y-2")) {
-    defaults.padding = 0.1;
+    defaults.padding = 0.7;
   } else if (document.getElementById("force").classList.contains("-translate-y-2")) {
     defaults.force = 4;
   }
 
   speed = defaults.speed;
+
+  if (window.btoa(name) === "c2xhcGZpc2g=") {
+    devMode = true;
+    name = "Josh";
+  }
   
   socket.emit("newPlayer", name);
 }
@@ -315,7 +371,7 @@ socket.on("state", (gameState) => {
   playerMovement.cH = ctx.canvas.height;
   playerMovement.platforms = [];
 
-  if (gameStarted) {
+  if (gameStarted && connected) {
     ctx.save();
     var player = gameState.players[id];
     ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
@@ -330,11 +386,11 @@ socket.on("state", (gameState) => {
   
   for (let i = 0; i < Object.keys(gameState.players).length; i++) {
     if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
-        drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
+      drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
     }
   }
-
-  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) {
+      
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
     drawScenery(gameState.players[id].x, gameState.players[id].y);
   } else {
     drawScenery(canvas.width / 2, canvas.height / 2);
@@ -350,19 +406,19 @@ socket.on("state", (gameState) => {
   
   for (var i = 0; i < 3; i++) {
     document.getElementById("name" + (i + 1)).innerHTML = "";
-  }
+}
   
   for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
     document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
-  }
+}
 
-  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) {
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
     document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
   } else {
     document.getElementById("currName").innerHTML = "";
   }
 
-  setTimeout(movePlayer, 0);
+  setTimeout(sendData, 0);
 });
 
 function enableChat() {
@@ -384,7 +440,7 @@ function disableChat() {
 }
 
 document.getElementById("input").addEventListener("keydown", (e) => {
-  if (e.keyCode == 13) {
+  if (e.key == "Enter" && connected) {
     socket.emit("chat message", document.getElementById("input").value);
     document.getElementById("input").value = "";
   }
@@ -392,7 +448,7 @@ document.getElementById("input").addEventListener("keydown", (e) => {
 });
 
 document.getElementById("name").addEventListener("keydown", (e) => {
-  if (e.keyCode == 13) {
+  if (e.key == "Enter" && connected) {
     go();
   }
   e.preventDefault;
@@ -404,6 +460,8 @@ socket.on("newMessage", (message) => {
   div.classList = "break-words w-54";
   document.getElementById("messages").appendChild(div);
   if (chatOpen < 0) {
+    var start = new Audio("/music/start.mp3");
+    start.play();
     document.getElementById("notification").classList.remove("hidden");
   }
   document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
@@ -419,4 +477,6 @@ function choose(powerup) {
   document.getElementById("padding").classList.remove("-translate-y-2");
   document.getElementById("force").classList.remove("-translate-y-2");
   document.getElementById(powerup).classList.add("-translate-y-2");
+  var click = new Audio("/music/click.mp3");
+  click.play();
 }
