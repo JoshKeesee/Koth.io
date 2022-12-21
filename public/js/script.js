@@ -9,6 +9,11 @@ var speed = 0;
 var devMode = false;
 var connected = false;
 var lastJumpVal;
+var mouseDown = false;
+var keyRight = false;
+var keyLeft = false;
+var keyUp = false;
+var keyDown = false;
 
 const playerMovement = {
   u: false,
@@ -24,30 +29,71 @@ const playerMovement = {
 const keyDownHandler = (e) => {
   if (e.key == "ArrowRight") {
     playerMovement.r = true;
+    keyRight = true;
   } else if (e.key == "ArrowLeft") {
     playerMovement.l = true;
+    keyLeft = true;
   } else if (e.key == "ArrowUp") {
     playerMovement.u = true;
+    keyUp = true
   } else if (e.key == "ArrowDown") {
     playerMovement.d = true;
+    keyDown = true;
   }
 };
 
 const keyUpHandler = (e) => {
   if (e.key == "ArrowRight") {
     playerMovement.r = false;
+    keyRight = false;
   } else if (e.key == "ArrowLeft") {
     playerMovement.l = false;
+    keyLeft = false;
   } else if (e.key == "ArrowUp") {
     playerMovement.u = false;
+    keyUp = false;
   } else if (e.key == "ArrowDown") {
     playerMovement.d = false;
+    keyDown = false;
   } else if (e.key == "Escape" && devMode) {
     if (playerMovement.flying === false) {
       playerMovement.flying = true;
     } else {
       playerMovement.flying = false;
     }
+  }
+};
+
+const mouseMoveHandler = (e) => {
+  if (mouseDown) {
+    if (e.clientX > ctx.canvas.width / 2 + 40) {
+      playerMovement.r = true;
+    } else {
+      playerMovement.r = false;
+    }
+    
+    if (e.clientX < ctx.canvas.width / 2 - 40) {
+      playerMovement.l = true;
+    } else {
+      playerMovement.l = false
+    }
+    
+    if (e.clientY < ctx.canvas.height / 2 - 40) {
+      playerMovement.u = true;
+    } else {
+      playerMovement.u = false;
+    }
+    
+    if (e.clientY > ctx.canvas.height / 2 + 40) {
+      playerMovement.d = true;
+    } else {
+      playerMovement.d = false;
+    }
+  } else if (!(keyRight && keyLeft && keyUp && keyDown)) {
+    playerMovement.r = false;
+    playerMovement.l = false;
+    playerMovement.t = false;
+    playerMovement.d = false;
   }
 };
 
@@ -193,8 +239,7 @@ socket.on("disconnect", () => {
     document.getElementById("disconnected").classList.remove("hidden");
   connected = false;
   document.getElementById("play").onclick = () => {};
-      document.getElementById("play").classList.add("cursor-not-allowed");
-  document.getElementById("chat").classList.replace("left-0", "-left-full");
+  document.getElementById("play").classList.add("cursor-not-allowed");
   document.getElementById("gameMusic").pause();
   document.getElementById("gameMusic").currentTime = 0;
   gameStarted = false;
@@ -213,6 +258,13 @@ function sendData() {
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
+canvas.addEventListener("mousemove", mouseMoveHandler, false);
+canvas.addEventListener("mousedown", () => {
+  mouseDown = true;
+});
+canvas.addEventListener("mouseup", () => {
+  mouseDown = false;
+});
 
 function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
   var length = playerMovement.platforms.length;
@@ -241,6 +293,14 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
     ctx.fill();
     ctx.closePath();
   }
+}
+
+function createBgRect(x, y, w, h, color = "blue") {
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.closePath();
 }
 
 function createBush(x, y) {
@@ -300,8 +360,19 @@ function createCloud(x, y) {
 }
 
 function drawMap() {
+  createObject(-1000, 500, 600, 200, "platform", "#000cfa");
   createObject(100, 500, 400, 200, "platform", "#000cfa");
   createObject(700, 500, 400, 200, "platform", "#000cfa");
+  createObject(1400, 500, 700, 200, "platform", "#000cfa");
+  createObject(-850, 100, 120, 50, "platform", "red");
+  createObject(-500, -200, 120, 50, "platform", "yellow");
+  createObject(-850, -500, 120, 50, "platform", "blue");
+  createObject(-2500, -500, 300, 1200, "platform", "indigo");
+  createObject(-2200, -500, 1000, 200, "platform", "indigo");
+  createObject(-2200, 0, 1000, 700, "platform", "orange");
+  createObject(-2000, -800, 120, 50, "platform", "yellow");
+  createObject(-1600, -800, 120, 50, "platform", "red");
+  createObject(-220, 350, 120, 50, "platform", "green");
   createObject(200, 250, 100, 50, "platform", "yellow");
   createObject(550, 250, 100, 50, "platform", "green");
   createObject(900, 250, 100, 50, "platform", "red");
@@ -312,20 +383,84 @@ function drawMap() {
 
 function drawScenery(x, y) {
   ctx.globalCompositeOperation = "destination-over";
+  createBgRect(-2200, -400, 1000, 500, "#8B4000");
+  ctx.beginPath();
+  ctx.roundRect(-700 + (x / 2.5), 200 + (y / 2.5), 1000, 1000, 10000);
+  ctx.fillStyle = "gray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(300 + (x / 2.3), 200 + (y / 2.3), 1000, 1000, 10000);
+  ctx.fillStyle = "darkgray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-100 + (x / 2), 100 + (y / 2), 1000, 1000, 10000);
+  ctx.fillStyle = "lightgray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(400 + (x / 1.7), -5 + (y / 1.7), 1000, 1000, 10000);
+  ctx.fillStyle = "gray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-500 + (x / 1.5), 0 + (y / 1.5), 900, 900, 10000);
+  ctx.fillStyle = "darkgray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-50 + (x / 1.3), -50 + (y / 1.3), 900, 900, 10000);
+  ctx.fillStyle = "#424242";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-400 + (x / 1.2), -60 + (y / 1.2), 900, 900, 10000);
+  ctx.fillStyle = "gray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(300 + (x / 1.2), -70 + (y / 1.2), 900, 900, 10000);
+  ctx.fillStyle = "lightgray";
+  ctx.fill();
+  ctx.closePath();
+  createCloud(600 + (x / 1.15), -230 + (y / 1.15));
+  createCloud(-600 + (x / 1.2), -200 + (y / 1.2));
+  createCloud(-800 + (x / 1.08), -200 + (y / 1.08));
+  ctx.beginPath();
+  ctx.roundRect(-800 + (x / 1.2), -50 + (y / 1.2), 900, 900, 10000);
+  ctx.fillStyle = "lightgray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-250 + (x / 1.15), -80 + (y / 1.15), 900, 900, 10000);
+  ctx.fillStyle = "darkgray";
+  ctx.fill();
+  ctx.closePath();
+  ctx.beginPath();
+  ctx.roundRect(-750 + (x / 1.1), -90 + (y / 1.1), 900, 900, 10000);
+  ctx.fillStyle = "#424242";
+  ctx.fill();
+  ctx.closePath();
   createCloud(-300 + (x / 1.05), -200 + (y / 1.05));
   createCloud(0 + (x / 1.1), -200 + (y / 1.1));
-  createCloud(-600 + (x / 1.2), -200 + (y / 1.2));
   createCloud(300 + (x / 1.08), -250 + (y / 1.08));
-  createCloud(300 + (x / 1.08), -250 + (y / 1.08));
-  createCloud(600 + (x / 1.15), -230 + (y / 1.15));
+  createCloud(800 + (x / 1.1), -270 + (y / 1.1));
   ctx.beginPath();
   ctx.roundRect(-800 + (x / 1.01), -400 + (y / 1.01), 300, 300, 500);
   ctx.fillStyle = "yellow";
   ctx.fill();
   ctx.closePath();
   ctx.globalCompositeOperation = "source-over";
+  createBush(-2450, -550);
+  createBush(-2100, -550);
+  createBush(-1700, -550);
+  createBush(-1400, -550);
+  createBush(-900, 450);
   createBush(250, 450);
   createBush(725, 450);
+  createBush(1600, 450);
+  createBush(1950, 450);
 }
 
 function go() {
@@ -333,7 +468,6 @@ function go() {
   start.play();
   document.getElementById("menu").classList.add("hidden");
       document.getElementById("disconnected").classList.add("hidden");
-  document.getElementById("chat").classList.replace("-left-full", "left-0");
   var name = document.getElementById("name").value;
   document.getElementById("gameMusic").play();
   gameStarted = true;
