@@ -10,7 +10,7 @@ const io = new Server(httpServer, {
     origin: ["https://admin.socket.io"],
     credentials: true
   },
-  maxHttpBufferSize: 3e7
+  maxHttpBufferSize: 5e6
 });
 
 instrument(io, {
