@@ -33,7 +33,7 @@
     </div>
   </div>
   <div id="chatWindow" class="fixed top-14 bottom-2 -left-full rounded-r-xl bg-black/50 backdrop-blur-md transition-all duration-300 overflow-hidden flex flex-col font-sans">
-    <div id="messages" class="p-2 overflow-y-scroll overflow-x-hidden text-white"></div>
+    <div id="messages" class="p-2 overflow-y-scroll overflow-x-hidden text-white break-words w-54"></div>
     <input type="text" id="input" class="p-2 border-t-2 border-blue-500 focus:outline-none mt-auto" placeholder="Say something..." />
   </div>
   <div id="leaderboard" class="fixed top-0 right-0 rounded-bl-xl bg-black/50 overflow-hidden backdrop-blur-md text-red-300 p-2 font-sans">
@@ -68,6 +68,7 @@
       </div>
     </div>
   </div>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" integrity="sha384-/KNQL8Nu5gCHLqwqfQjA689Hhoqgi2S84SNUxC3roTe4EhJ9AfLkp8QiQcU8AMzI" crossorigin="anonymous"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/script.js"></script>
+  <script src="/js/chat.js"></script>
 </body>

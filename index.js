@@ -130,7 +130,7 @@ io.on("connection", (socket) => {
       player.xVel = 0;
       player.y = -500;
       player.x = player.num * 100;
-      if (player.lt !== null) {
+      if (player.lt !== null && gameState.players[player.lt].name !== "A Cheater Using Hacks") {
         gameState.leaderboard[player.lt] += gameState.players[player.lt].pps;
         gameState.leaderboard = Object.entries(gameState.leaderboard)
           .sort(([, a], [, b]) => a - b)
