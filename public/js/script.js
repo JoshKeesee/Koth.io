@@ -303,6 +303,46 @@ function createBgRect(x, y, w, h, color = "blue") {
   ctx.closePath();
 }
 
+function createFlower(x, y) {
+  ctx.beginPath();
+  ctx.moveTo(x + 7.5, y);
+  ctx.lineTo(x + 7.5, y + 50);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "green";
+  ctx.stroke();
+  ctx.closePath();
+  
+  ctx.beginPath();
+  ctx.roundRect(x, y - 8, 15, 15, 15);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.closePath();
+  
+  ctx.beginPath();
+  ctx.roundRect(x + 8, y, 15, 15, 15);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.closePath();
+
+  ctx.beginPath();
+  ctx.roundRect(x, y + 8, 15, 15, 15);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.closePath();
+
+  ctx.beginPath();
+  ctx.roundRect(x - 8, y, 15, 15, 15);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.closePath();
+
+  ctx.beginPath();
+  ctx.roundRect(x, y, 15, 15, 15);
+  ctx.fillStyle = tinycolor("yellow").darken(15).toString();
+  ctx.fill();
+  ctx.closePath();
+}
+
 function createBush(x, y) {
   var grd = ctx.createLinearGradient(x, y + 50, x, y);
   grd.addColorStop(0, "green");
@@ -379,6 +419,14 @@ function drawMap() {
   createObject(750, 0, 100, 50, "platform", "yellow");
   createObject(350, 0, 100, 50, "platform", "red");
   createObject(550, -250, 100, 50, "platform", "green");
+  createObject(2200, 250, 200, 50, "platform", "indigo");
+  createObject(1800, 0, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(2200, -250, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(1800, -500, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(2200, -750, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(1800, -1000, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(2200, -1250, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(2500, -1400, 1000, 200, "platform", "indigo");
 }
 
 function drawScenery(x, y) {
@@ -461,6 +509,7 @@ function drawScenery(x, y) {
   createBush(725, 450);
   createBush(1600, 450);
   createBush(1950, 450);
+  createFlower(200, 450);
 }
 
 function go() {
@@ -491,7 +540,10 @@ function go() {
 
   if (window.btoa(name) === "c2xhcGZpc2g=") {
     devMode = true;
-    name = "Josh";
+    name = "A Cheater Using Hacks";
+  } else if (window.btoa(name) === "aW5maW5qdW1wcw==") {
+    defaults.jumps = 1e100;
+    name = "A Cheater Using Hacks";
   }
   
   socket.emit("newPlayer", name);

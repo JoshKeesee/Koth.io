@@ -10,7 +10,7 @@ const io = new Server(httpServer, {
     origin: ["https://admin.socket.io"],
     credentials: true
   },
-  maxHttpBufferSize: 1e6
+  maxHttpBufferSize: 5e6
 });
 
 instrument(io, {
@@ -140,92 +140,6 @@ io.on("connection", (socket) => {
       }
     }
 
-    collision(player, playerMovement.platforms, playerMovement);
-
-    // for (let i = 0; i < playerMovement.platforms.length; i++) {
-    //   var top = playerMovement.platforms[i].t;
-    //   var bottom = playerMovement.platforms[i].b;
-    //   var left = playerMovement.platforms[i].l;
-    //   var right = playerMovement.platforms[i].r;
-    //   var width = playerMovement.platforms[i].w;
-    //   var height = playerMovement.platforms[i].h;
-    //   var type = playerMovement.platforms[i].type;
-    //   var playerId = playerMovement.platforms[i].playerId;
-
-    //   if (player.x + player.w > left) {
-    //     if (player.x + player.w < left + (width / 2) && player.y < bottom - (height / 2) && player.y > top - player.h + (height / 2)) {
-    //       if (type === "player") {
-    //         player.touching = true;
-    //         if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-    //           gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-    //           player.xVel = 0 - (player.xVel * defaults.resistance);
-    //           player.yVel = 0;
-    //         } else {
-    //           player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
-    //         }
-    //         gameState.players[playerId].lt = player.id;
-    //       } else {
-    //         player.xVel = 0;
-    //         player.yVel = 0;
-    //       }
-    //       player.x = left - player.w;
-    //       player.jumps = 0;
-    //     }
-    //   }
-
-    //   if (player.x < right) {
-    //     if (player.x > right - (width / 2) && player.y < bottom - (height / 2) && player.y > top - player.h + (height / 2)) {
-    //       if (type === "player") {
-    //         player.touching = true;
-    //         if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-    //           gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-    //           player.xVel = 0 - (player.xVel * defaults.resistance);
-    //           player.yVel = 0;
-    //         } else {
-    //           player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
-    //         }
-    //         gameState.players[playerId].lt = player.id;
-    //       } else {
-    //         player.xVel = 0;
-    //         player.yVel = 0;
-    //       }
-    //       player.x = right;
-    //       player.jumps = 0;
-    //     }
-    //   }
-
-    //   if (player.y > top - player.h - 2) {
-    //     if (player.x < right && player.y < top - player.h + (height / 2) - 2 && player.x + player.w > left) {
-    //       if (type === "player") {
-    //         player.touching = true;
-    //         player.yVel = 0 - (player.yVel * 0.8);
-    //         gameState.players[playerId].lt = player.id;
-    //         if (playerMovement.u) {
-    //           player.yVel -= defaults.jumpForce;
-    //         }
-    //       } else {
-    //         player.yVel = 0;
-    //       }
-    //       player.y = top - player.h - 2;
-    //       player.jumps = 0;
-    //     }
-    //   }
-
-    //   if (player.y < bottom) {
-    //     if (player.x < right && player.y > bottom - (height / 2) && player.x + player.w > left) {
-    //       if (type === "player") {
-    //         player.touching = true;
-    //         gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
-    //         gameState.players[playerId].lt = player.id;
-    //         player.yVel = 1;
-    //       } else {
-    //         player.yVel = 1;
-    //       }
-    //       player.y = bottom;
-    //     }
-    //   }
-    // }
-
     if (!playerMovement.u || player.yVel == 0) {
       player.jumping = false;
     }
@@ -252,6 +166,8 @@ io.on("connection", (socket) => {
       player.yVel *= defaults.resistance;
     }
 
+    collision(player, playerMovement.platforms, playerMovement);
+
     player.xVel *= defaults.resistance;
     player.y += player.yVel;
     player.x += player.xVel;
@@ -273,6 +189,10 @@ io.on("connection", (socket) => {
         player.num = playerNum;
       }
     }
+
+    if (player.name === "A Cheater Using Hacks") {
+      gameState.leaderboard[socket.id] = 0;
+    }
   });
 
   socket.on("chat message", (message) => {
@@ -289,19 +209,31 @@ function colliding(r1, r2) {
 }
 
 function colR(r1, r2) {
-  return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - Math.abs(r1.xVel));
+  if (r1.xVel >= -5 && r1.xVel <= 0) {
+    return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - 5);
+  } else {
+    return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - Math.abs(r1.xVel));
+  }
 }
 
 function colL(r1, r2) {
-  return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + Math.abs(r1.xVel));
+  if (r1.xVel <= 5 && r1.xVel >= 0) {
+    return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + 5);
+  } else {
+    return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + Math.abs(r1.xVel));
+  }
 }
 
 function colB(r1, r2) {
-  return (r1.y < r2.t + r2.h && r1.y > r2.t - Math.abs(r1.yVel));
+  if (r1.yVel >= -5 && r1.yVel <= 0) {
+    return (r1.y < r2.t + r2.h && r1.y > r2.t + r2.h - 5);
+  } else {
+    return (r1.y < r2.t + r2.h && r1.y > r2.t + r2.h - Math.abs(r1.yVel));
+  }
 }
 
 function colT(r1, r2) {
-  if (r1.yVel <= 1) {
+  if (r1.yVel <= 5 && r1.yVel >= 0) {
     return (r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + 5);
   } else {
     return (r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + Math.abs(r1.yVel));
@@ -313,16 +245,6 @@ function collision(player, platforms, playerMovement) {
     var playerId = platforms[i].playerId;
     var type = platforms[i].type;
     if (colliding(player, platforms[i])) {
-      if (colB(player, platforms[i])) {
-        if (type === "player") {
-          player.touching = true;
-          gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
-          gameState.players[playerId].lt = player.id;
-        }
-        player.y = platforms[i].t + platforms[i].h;
-        player.yVel = 1;
-      }
-
       if (colT(player, platforms[i])) {
         if (type === "player") {
           player.touching = true;
@@ -335,7 +257,6 @@ function collision(player, platforms, playerMovement) {
           player.yVel = 0;
         }
         player.y = platforms[i].t - player.h;
-        player.yVel = 0;
         player.jumps = 0;
       }
 
@@ -371,6 +292,16 @@ function collision(player, platforms, playerMovement) {
         }
         player.x = platforms[i].l + platforms[i].w;
         player.xVel = 0;
+      }
+
+      if (colB(player, platforms[i])) {
+        if (type === "player") {
+          player.touching = true;
+          gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
+          gameState.players[playerId].lt = player.id;
+        }
+        player.y = platforms[i].t + platforms[i].h;
+        player.yVel = 1;
       }
     }
   }
