@@ -67,25 +67,25 @@ const keyUpHandler = (e) => {
 
 const mouseMoveHandler = (e) => {
   if (mouseDown) {
-    if (e.clientX > ctx.canvas.width / 2 + 40) {
+    if (e.touches[0].clientX > ctx.canvas.width / 2 + 40) {
       playerMovement.r = true;
     } else {
       playerMovement.r = false;
     }
     
-    if (e.clientX < ctx.canvas.width / 2 - 40) {
+    if (e.touches[0].clientX < ctx.canvas.width / 2 - 40) {
       playerMovement.l = true;
     } else {
       playerMovement.l = false
     }
     
-    if (e.clientY < ctx.canvas.height / 2 - 40) {
+    if (e.touches[0].clientY < ctx.canvas.height / 2 - 40) {
       playerMovement.u = true;
     } else {
       playerMovement.u = false;
     }
     
-    if (e.clientY > ctx.canvas.height / 2 + 40) {
+    if (e.touches[0].clientY > ctx.canvas.height / 2 + 40) {
       playerMovement.d = true;
     } else {
       playerMovement.d = false;
@@ -99,27 +99,29 @@ const mouseMoveHandler = (e) => {
 };
 
 const drawPlayer = (player, leaderboard) => {
+  if (player.num === 1) {
+    color = "#0095DD";
+  } else if (player.num === 2) {
+    color = "red";
+  } else if (player.num === 3) {
+    color = "green";
+  } else if (player.num === 4) {
+    color = "indigo";
+  } else if (player.num === 5) {
+    color = "orange";
+  } else if (player.num === 6) {
+    color = "blue";
+  } else if (player.num === 7) {
+    color = "purple";
+  } else if (player.num === 8) {
+    color = "yellow";
+  } else {
+    color = "black";
+  }
+  
   ctx.beginPath();
   ctx.roundRect(player.x, player.y, player.w, player.h, 15);
-  if (player.num === 1) {
-    ctx.fillStyle = "#0095DD";
-  } else if (player.num === 2) {
-    ctx.fillStyle = "red";
-  } else if (player.num === 3) {
-    ctx.fillStyle = "green";
-  } else if (player.num === 4) {
-    ctx.fillStyle = "indigo";
-  } else if (player.num === 5) {
-    ctx.fillStyle = "orange";
-  } else if (player.num === 6) {
-    ctx.fillStyle = "blue";
-  } else if (player.num === 7) {
-    ctx.fillStyle = "purple";
-  } else if (player.num === 8) {
-    ctx.fillStyle = "yellow";
-  } else {
-    ctx.fillStyle = "black";
-  }
+  ctx.fillStyle = color;
   ctx.fill();
   ctx.closePath();
 
@@ -259,13 +261,18 @@ function sendData() {
 
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
-canvas.addEventListener("mousemove", mouseMoveHandler, false);
-canvas.addEventListener("mousedown", () => {
+document.addEventListener("touchmove", mouseMoveHandler, false);
+document.addEventListener("touchstart", () => {
   mouseDown = true;
-});
-canvas.addEventListener("mouseup", () => {
+}, false);
+document.addEventListener("touchend", () => {
   mouseDown = false;
-});
+}, false);
+
+window.history.pushState(null, null, window.location.href);
+window.onpopstate = function () {
+    window.history.go(1);
+};
 
 function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
   var length = playerMovement.platforms.length;
