@@ -10,7 +10,7 @@ const io = new Server(httpServer, {
     origin: ["https://admin.socket.io"],
     credentials: true
   },
-  maxHttpBufferSize: 5e6
+  maxHttpBufferSize: 1e6
 });
 
 instrument(io, {
@@ -201,7 +201,7 @@ io.on("connection", (socket) => {
 
   setInterval(() => {
     socket.emit("state", gameState);
-  }, 1000 / 60);
+  }, 1000 / 70);
 });
 
 function colliding(r1, r2) {

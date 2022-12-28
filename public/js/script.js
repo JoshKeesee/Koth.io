@@ -14,6 +14,7 @@ var keyRight = false;
 var keyLeft = false;
 var keyUp = false;
 var keyDown = false;
+var gameState;
 
 const playerMovement = {
   u: false,
@@ -349,25 +350,25 @@ function createBush(x, y) {
   grd.addColorStop(1, "rgb(0, 200, 0)");
 
   ctx.beginPath();
-  ctx.roundRect(x, y - 1, 50, 50, 50);
+  ctx.roundRect(x, y, 50, 50, 50);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
 
   ctx.beginPath();
-  ctx.roundRect(x + 40, y - 12 - 1, 50, 50, 50);
+  ctx.roundRect(x + 40, y - 12, 50, 50, 50);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
 
   ctx.beginPath();
-  ctx.roundRect(x + 80, y - 1, 50, 50, 50);
+  ctx.roundRect(x + 80, y, 50, 50, 50);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
 
   ctx.beginPath();
-  ctx.rect(x + 25, y + 10 - 1, 80, 40);
+  ctx.rect(x + 25, y + 10, 80, 40);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.closePath();
@@ -549,7 +550,7 @@ function go() {
   socket.emit("newPlayer", name);
 }
 
-socket.on("state", (gameState) => {
+function updateGame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
@@ -569,10 +570,12 @@ socket.on("state", (gameState) => {
     ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
     drawMap();
   }
-  
-  for (let i = 0; i < Object.keys(gameState.players).length; i++) {
-    if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
-      drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
+
+  if (gameState !== 0) {
+    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+      if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
+        drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
+      }
     }
   }
       
@@ -592,11 +595,11 @@ socket.on("state", (gameState) => {
   
   for (var i = 0; i < 3; i++) {
     document.getElementById("name" + (i + 1)).innerHTML = "";
-}
+  }
   
   for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
     document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
-}
+  }
 
   if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
     document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
@@ -605,6 +608,10 @@ socket.on("state", (gameState) => {
   }
 
   setTimeout(sendData, 0);
+}
+
+socket.on("state", (state) => {
+  gameState = state;
 });
 
 document.getElementById("name").addEventListener("keydown", (e) => {
@@ -627,3 +634,8 @@ function choose(powerup) {
   var click = new Audio("/music/click.mp3");
   click.play();
 }
+
+sendData();
+setTimeout(() => {
+  setInterval(updateGame, 1000 / 70);
+}, 500);
