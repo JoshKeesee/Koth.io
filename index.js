@@ -234,9 +234,9 @@ function colB(r1, r2) {
 
 function colT(r1, r2) {
   if (r1.yVel <= 5 && r1.yVel >= 0) {
-    return (r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + 5);
+    return ((r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + 5) || (r1.y + (r1.h / 1.5) > r2.t && r1.y + (r1.h / 1.5) < r2.t + 5));
   } else {
-    return (r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + Math.abs(r1.yVel));
+    return ((r1.y + r1.h > r2.t && r1.y + r1.h < r2.t + Math.abs(r1.yVel)) || (r1.y + (r1.h / 1.5) >= r2.t && r1.y + (r1.h / 1.5) < r2.t + Math.abs(r1.yVel)));
   }
 }
 
