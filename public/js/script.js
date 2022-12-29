@@ -15,6 +15,9 @@ var keyLeft = false;
 var keyUp = false;
 var keyDown = false;
 var gameState;
+var stop = false;
+var frameCount = 0;
+var fps, fpsInterval, startTime, now, then, elapsed;
 
 const playerMovement = {
   u: false,
@@ -557,66 +560,6 @@ function go() {
   socket.emit("newPlayer", name);
 }
 
-function updateGame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.canvas.width = window.innerWidth;
-  ctx.canvas.height = window.innerHeight;
-  playerMovement.cW = ctx.canvas.width;
-  playerMovement.cH = ctx.canvas.height;
-  playerMovement.platforms = [];
-
-  if (gameStarted && connected) {
-    ctx.save();
-    var player = gameState.players[id];
-    ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
-    drawMap();
-    drawPlayer(player, gameState.leaderboard);
-  } else {
-    ctx.save();
-    ctx.scale(0.8, 0.8);
-    ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
-    drawMap();
-  }
-
-  if (gameState !== 0) {
-    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
-      if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
-        drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
-      }
-    }
-  }
-      
-  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
-    drawScenery(gameState.players[id].x, gameState.players[id].y);
-  } else {
-    drawScenery(canvas.width / 2, canvas.height / 2);
-  }
-
-  ctx.restore();
-  ctx.beginPath();
-  ctx.globalCompositeOperation = "destination-over";
-  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.fillStyle = "skyblue";
-  ctx.fill();
-  ctx.closePath();
-  
-  for (var i = 0; i < 3; i++) {
-    document.getElementById("name" + (i + 1)).innerHTML = "";
-  }
-  
-  for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
-    document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
-  }
-
-  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
-    document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
-  } else {
-    document.getElementById("currName").innerHTML = "";
-  }
-
-  setTimeout(sendData, 0);
-}
-
 socket.on("state", (state) => {
   gameState = state;
 });
@@ -644,5 +587,81 @@ function choose(powerup) {
 
 sendData();
 setTimeout(() => {
-  setInterval(updateGame, 1000 / 70);
-}, 500);
+  startAnimating(100);
+}, 100);
+
+function startAnimating(fps) {
+  fpsInterval = 1000 / fps;
+  then = Date.now();
+  startTime = then;
+  animate();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  now = Date.now();
+  elapsed = now - then;
+
+  if (elapsed > fpsInterval) {
+    then = now - (elapsed % fpsInterval);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.canvas.width = window.innerWidth;
+    ctx.canvas.height = window.innerHeight;
+    playerMovement.cW = ctx.canvas.width;
+    playerMovement.cH = ctx.canvas.height;
+    playerMovement.platforms = [];
+
+    if (gameStarted && connected) {
+      ctx.save();
+      var player = gameState.players[id];
+      ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
+      drawMap();
+      drawPlayer(player, gameState.leaderboard);
+    } else {
+      ctx.save();
+      ctx.scale(0.8, 0.8);
+      ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
+      drawMap();
+    }
+
+    if (gameState !== 0) {
+      for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+        if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
+          drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
+        }
+      }
+    }
+        
+    if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
+      drawScenery(gameState.players[id].x, gameState.players[id].y);
+    } else {
+      drawScenery(canvas.width / 2, canvas.height / 2);
+    }
+
+    ctx.restore();
+    ctx.beginPath();
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = "skyblue";
+    ctx.fill();
+    ctx.closePath();
+    
+    for (var i = 0; i < 3; i++) {
+      document.getElementById("name" + (i + 1)).innerHTML = "";
+    }
+    
+    for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
+      document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
+    }
+
+    if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
+      document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
+    } else {
+      document.getElementById("currName").innerHTML = "";
+    }
+
+    setTimeout(sendData, 0);
+  }
+}
