@@ -1,6 +1,7 @@
 const socket = io();
 const canvas = document.getElementById("ctx");
 const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = true;
 var id;
 var chatOpen = -1;
 var gameStarted = false;
@@ -18,6 +19,12 @@ var gameState;
 var stop = false;
 var frameCount = 0;
 var fps, fpsInterval, startTime, now, then, elapsed;
+const dirt = new Image();
+dirt.src = "/images/dirt.jpg";
+var dirtPattern;
+const hill = new Image();
+hill.src = "/images/mountain.jpg";
+var hillPattern;
 
 const playerMovement = {
   u: false,
@@ -34,15 +41,19 @@ const keyDownHandler = (e) => {
   if (e.key == "ArrowRight") {
     playerMovement.r = true;
     keyRight = true;
+    mouseDown = false;
   } else if (e.key == "ArrowLeft") {
     playerMovement.l = true;
     keyLeft = true;
+    mouseDown = false;
   } else if (e.key == "ArrowUp") {
     playerMovement.u = true;
     keyUp = true
+    mouseDown = false;
   } else if (e.key == "ArrowDown") {
     playerMovement.d = true;
     keyDown = true;
+    mouseDown = false;
   }
 };
 
@@ -303,6 +314,34 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
     ctx.fillStyle = color;
     ctx.fill();
     ctx.closePath();
+  } else if (type === "ground") {
+    for (var i = 4; i > 0; i--) {
+      ctx.beginPath();
+      ctx.roundRect(l + i, t - i, w, h, 4);
+      ctx.fillStyle = tinycolor("brown").darken(15).toString();
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    for (var i = 4; i > 0; i--) {
+      ctx.beginPath();
+      ctx.roundRect(l + i, t - i, w, 40, 4);
+      ctx.fillStyle = tinycolor("green").darken(5).toString();
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    ctx.beginPath();
+    ctx.roundRect(l, t, w, h, 4);
+    ctx.fillStyle = dirtPattern;
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.roundRect(l, t, w, 40, 4);
+    ctx.fillStyle = "green";
+    ctx.fill();
+    ctx.closePath();
   }
 }
 
@@ -410,17 +449,28 @@ function createCloud(x, y) {
   ctx.closePath();
 }
 
+function createHill(x, y, w, h, px, py) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x + px, y + py, w, h, 10000);
+  ctx.stroke();
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(hill, x + px, y + py, w, h);
+  ctx.restore();
+}
+
 function drawMap() {
-  createObject(-1000, 500, 600, 200, "platform", "#000cfa");
-  createObject(100, 500, 400, 200, "platform", "#000cfa");
-  createObject(700, 500, 400, 200, "platform", "#000cfa");
-  createObject(1400, 500, 700, 200, "platform", "#000cfa");
+  createObject(-1000, 500, 600, 200, "ground");
+  createObject(100, 500, 400, 200, "ground");
+  createObject(700, 500, 400, 200, "ground");
+  createObject(1400, 500, 700, 200, "ground");
   createObject(-850, 100, 120, 50, "platform", "red");
   createObject(-500, -200, 120, 50, "platform", "yellow");
   createObject(-850, -400, 120, 50, "platform", "blue");
-  createObject(-2500, -500, 300, 1200, "platform", "indigo");
-  createObject(-2200, -500, 1000, 200, "platform", "indigo");
-  createObject(-2200, 0, 1000, 700, "platform", "orange");
+  createObject(-2500, -500, 300, 1200, "ground");
+  createObject(-2500, -500, 1300, 200, "ground");
+  createObject(-2200, 10, 1000, 690, "ground");
   createObject(-2000, -700, 120, 50, "platform", "yellow");
   createObject(-1600, -700, 120, 50, "platform", "red");
   createObject(-220, 350, 120, 50, "platform", "green");
@@ -437,70 +487,25 @@ function drawMap() {
   createObject(2200, -750, 200, 50, "platform", "rgba(0, 0, 0, 0)");
   createObject(1800, -1000, 200, 50, "platform", "rgba(0, 0, 0, 0)");
   createObject(2200, -1250, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(2500, -1400, 1000, 200, "platform", "indigo");
+  createObject(2500, -1400, 1000, 200, "ground");
 }
 
 function drawScenery(x, y) {
   ctx.globalCompositeOperation = "destination-over";
   createBgRect(-2200, -400, 1000, 500, "#8B4000");
-  ctx.beginPath();
-  ctx.roundRect(-700 + (x / 2.5), 200 + (y / 2.5), 1000, 3000, 10000);
-  ctx.fillStyle = "gray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(300 + (x / 2.3), 200 + (y / 2.3), 1000, 3000, 10000);
-  ctx.fillStyle = "darkgray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-100 + (x / 2), 100 + (y / 2), 1000, 3000, 10000);
-  ctx.fillStyle = "lightgray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(400 + (x / 1.7), -5 + (y / 1.7), 1000, 3000, 10000);
-  ctx.fillStyle = "gray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-500 + (x / 1.5), 0 + (y / 1.5), 900, 3000, 10000);
-  ctx.fillStyle = "darkgray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-50 + (x / 1.3), -50 + (y / 1.3), 900, 3000, 10000);
-  ctx.fillStyle = "#424242";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-400 + (x / 1.2), -60 + (y / 1.2), 900, 3000, 10000);
-  ctx.fillStyle = "gray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(300 + (x / 1.2), -70 + (y / 1.2), 900, 3000, 10000);
-  ctx.fillStyle = "lightgray";
-  ctx.fill();
-  ctx.closePath();
+  createHill(-700, 200, 1000, 3000, x / 2.5, y / 2.5);
+  createHill(300, 200, 1000, 3000, x / 2.3, y / 2.3);
+  createHill(-100, 100, 1000, 3000, x / 2, y / 2);
+  createHill(-500, 0, 900, 3000, x / 1.7, y / 1.7);
+  createHill(-50, -50, 900, 3000, x / 1.5, y / 1.5);
+  createHill(-400, -60, 900, 3000, x / 1.3, y / 1.3);
+  createHill(300, -70, 900, 3000, x / 1.2, y / 1.2);
   createCloud(600 + (x / 1.15), -230 + (y / 1.15));
   createCloud(-600 + (x / 1.2), -200 + (y / 1.2));
   createCloud(-800 + (x / 1.08), -200 + (y / 1.08));
-  ctx.beginPath();
-  ctx.roundRect(-800 + (x / 1.2), -50 + (y / 1.2), 900, 3000, 10000);
-  ctx.fillStyle = "lightgray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-250 + (x / 1.15), -80 + (y / 1.15), 900, 3000, 10000);
-  ctx.fillStyle = "darkgray";
-  ctx.fill();
-  ctx.closePath();
-  ctx.beginPath();
-  ctx.roundRect(-750 + (x / 1.1), -90 + (y / 1.1), 900, 3000, 10000);
-  ctx.fillStyle = "#424242";
-  ctx.fill();
-  ctx.closePath();
+  createHill(300, -50, 900, 3000, x / 1.2, y / 1.2);
+  createHill(-800, -50, 900, 3000, x / 1.15, y / 1.15);
+  createHill(-100, -50, 900, 3000, x / 1.1, y / 1.1);
   createCloud(-300 + (x / 1.05), -200 + (y / 1.05));
   createCloud(0 + (x / 1.1), -200 + (y / 1.1));
   createCloud(300 + (x / 1.08), -250 + (y / 1.08));
@@ -527,7 +532,7 @@ function go() {
   var start = new Audio("/music/start.mp3");
   start.play();
   document.getElementById("menu").classList.add("hidden");
-      document.getElementById("disconnected").classList.add("hidden");
+  document.getElementById("disconnected").classList.add("hidden");
   var name = document.getElementById("name").value;
   document.getElementById("gameMusic").play();
   gameStarted = true;
@@ -588,9 +593,10 @@ function choose(powerup) {
 sendData();
 setTimeout(() => {
   startAnimating(100);
-}, 100);
+}, 500);
 
 function startAnimating(fps) {
+  dirtPattern = ctx.createPattern(dirt, "repeat");
   fpsInterval = 1000 / fps;
   then = Date.now();
   startTime = then;
