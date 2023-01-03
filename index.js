@@ -36,7 +36,8 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
   gameState.players[socket.id] = {
-    name: null
+    name: null,
+    lt: null
   };
 
   socket.on("disconnect", () => {
@@ -76,7 +77,8 @@ io.on("connection", (socket) => {
       speed: 0,
       pushForce: 2,
       knockback: 1,
-      touching: false
+      touching: false,
+      damage: 0,
     };
 
     gameState.leaderboard[socket.id] = 0;
@@ -120,23 +122,6 @@ io.on("connection", (socket) => {
         player.w += 0.2 * (70 - player.w);
         defaults.speed = player.speed;
         defaults.gravity = 0.4;
-      }
-    }
-
-    const g = 1000 - player.h;
-
-    if (player.y >= g) {
-      player.yVel = 0;
-      player.xVel = 0;
-      player.y = -500;
-      player.x = player.num * 100;
-      if (player.lt !== null && gameState.players[player.lt].name !== "A Cheater Using Hacks") {
-        gameState.leaderboard[player.lt] += gameState.players[player.lt].pps;
-        gameState.leaderboard = Object.entries(gameState.leaderboard)
-          .sort(([, a], [, b]) => a - b)
-          .reverse()
-          .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
-        player.lt = null;
       }
     }
 
@@ -193,6 +178,10 @@ io.on("connection", (socket) => {
     if (player.name === "A Cheater Using Hacks") {
       gameState.leaderboard[socket.id] = 0;
     }
+
+    if (player.damage >= 100) {
+      respawn(player);
+    }
   });
 
   socket.on("chat message", (message) => {
@@ -203,6 +192,26 @@ io.on("connection", (socket) => {
     socket.emit("state", gameState);
   }, 1000 / 70);
 });
+
+function respawn(player) {
+  player.yVel = 0;
+  player.xVel = 0;
+  player.y = -500;
+  player.x = player.num * 100;
+  player.w = 100;
+  player.h = 100;
+  player.damage = 0;
+  if (player.lt !== null) {
+    if (gameState.players[player.lt].name !== "A Cheater Using Hacks") {
+      gameState.leaderboard[player.lt] += gameState.players[player.lt].pps;
+      gameState.leaderboard = Object.entries(gameState.leaderboard)
+        .sort(([, a], [, b]) => a - b)
+        .reverse()
+        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
+      player.lt = null;
+    }
+  }
+}
 
 function colliding(r1, r2) {
   return !(r1.x > r2.l + r2.w || r1.x + r1.w < r2.l || r1.y > r2.t + r2.h || r1.y + r1.h < r2.t);
@@ -245,63 +254,72 @@ function collision(player, platforms, playerMovement) {
     var playerId = platforms[i].playerId;
     var type = platforms[i].type;
     if (colliding(player, platforms[i])) {
-      if (colT(player, platforms[i])) {
-        if (type === "player") {
-          player.touching = true;
-          player.yVel = 0 - (player.yVel * 0.8);
-          gameState.players[playerId].lt = player.id;
-          if (playerMovement.u) {
-            player.yVel -= defaults.jumpForce;
-          }
-        } else {
-          player.yVel = 0;
-        }
-        player.y = platforms[i].t - player.h;
-        player.jumps = 0;
-      }
-
-      if (colL(player, platforms[i])) {
-        if (type === "player") {
-          player.touching = true;
-          if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-            gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-            player.xVel = 0 - (player.xVel * defaults.resistance);
+      if (type !== "lava") {
+        if (colT(player, platforms[i])) {
+          if (type === "player") {
+            player.y = platforms[i].t - player.h;
+            player.touching = true;
+            player.yVel = 0 - (player.yVel * 0.8);
+            gameState.players[playerId].lt = player.id;
+            if (playerMovement.u) {
+              player.yVel -= defaults.jumpForce;
+            }
           } else {
-            player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+            player.y = platforms[i].t - player.h;
+            player.yVel = 0;
+          }  
+          player.jumps = 0;
+        }
+  
+        if (colL(player, platforms[i])) {
+          if (type === "player") {
+            player.touching = true;
+            if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
+              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
+              player.xVel = 0 - (player.xVel * defaults.resistance);
+              gameState.players[playerId].damage += 10;
+            } else {
+              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+              player.damage += 10;
+            }
+            gameState.players[playerId].lt = player.id;
+          } else {
+            player.xVel = 0;
           }
-          gameState.players[playerId].lt = player.id;
-        } else {
+          player.x = platforms[i].l - player.w;
           player.xVel = 0;
         }
-        player.x = platforms[i].l - player.w;
-        player.xVel = 0;
-      }
-
-      if (colR(player, platforms[i])) {
-        if (type === "player") {
-          player.touching = true;
-          if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-            gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-            player.xVel = 0 - (player.xVel * defaults.resistance);
+  
+        if (colR(player, platforms[i])) {
+          if (type === "player") {
+            player.touching = true;
+            if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
+              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
+              player.xVel = 0 - (player.xVel * defaults.resistance);
+              gameState.players[playerId].damage += 10;
+            } else {
+              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+              player.damage += 10;
+            }
+            gameState.players[playerId].lt = player.id;
           } else {
-            player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+            player.xVel = 0;
           }
-          gameState.players[playerId].lt = player.id;
-        } else {
+          player.x = platforms[i].l + platforms[i].w;
           player.xVel = 0;
         }
-        player.x = platforms[i].l + platforms[i].w;
-        player.xVel = 0;
-      }
-
-      if (colB(player, platforms[i])) {
-        if (type === "player") {
-          player.touching = true;
-          gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
-          gameState.players[playerId].lt = player.id;
+  
+        if (colB(player, platforms[i])) {
+          if (type === "player") {
+            player.touching = true;
+            gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
+            gameState.players[playerId].lt = player.id;
+          }
+          player.y = platforms[i].t + platforms[i].h;
+          player.yVel = 1;
         }
-        player.y = platforms[i].t + platforms[i].h;
-        player.yVel = 1;
+      } else {
+        respawn(player);
       }
     }
   }

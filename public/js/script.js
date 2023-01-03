@@ -25,13 +25,22 @@ var fps = 0;
 const dirt = new Image();
 dirt.src = "/images/dirt.jpg";
 var dirtPattern;
+const lava = new Image();
+lava.src = "/images/lava.jpeg";
+var lavaPattern;
 const hill = new Image();
 hill.src = "/images/mountain.jpg";
-var bg = new Image();
+const bg = new Image();
 bg.src = "/images/cliff.png";
-var bgcliff = new Image();
+const bgcliff = new Image();
 bgcliff.src = "/images/bgcliff.png";
+const bgmountain = new Image();
+bgmountain.src = "/images/bgmountain.png";
 const scrollSpeed = 9;
+const clouds = [];
+var cameraX = 0;
+var cameraY = 0;
+const cameraSmoothing = 3;
 
 const playerMovement = {
   u: false,
@@ -213,7 +222,7 @@ const drawPlayer = (player, leaderboard) => {
     ctx.fill();
     ctx.closePath();
 
-    if (player.name != null) {
+    if (player.name !== null) {
       ctx.fillStyle = "rgba(0, 0, 150, " + (player.h + 30) / 100 + ")";
       ctx.font = "bold 30px Arial";
       ctx.textAlign = "center";
@@ -224,6 +233,18 @@ const drawPlayer = (player, leaderboard) => {
     ctx.font = "bold 30px Arial";
     ctx.textAlign = "center";
     ctx.fillText(player.name, player.x + (player.w / 2), player.y - 10);
+
+    ctx.beginPath();
+    ctx.rect(player.x, player.y - 60, player.w, 20);
+    ctx.strokeStyle = "green";
+    ctx.stroke();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(player.x, player.y - 60, player.w - (player.damage / player.w), 20);
+    ctx.fillStyle = "green";
+    ctx.fill();
+    ctx.closePath();
   }
 
   if (player.id !== id) {
@@ -325,7 +346,7 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
     for (var i = 4; i > 0; i--) {
       ctx.beginPath();
       ctx.roundRect(l + i, t - i, w, h, 4);
-      ctx.fillStyle = tinycolor("#542a01").toString();
+      ctx.fillStyle = tinycolor("#C4A484").darken(5).toString();
       ctx.fill();
       ctx.closePath();
     }
@@ -349,6 +370,26 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
     ctx.fillStyle = "green";
     ctx.fill();
     ctx.closePath();
+  } else if (type === "lava") {
+    ctx.beginPath();
+    ctx.rect(l, t, w, h);
+    ctx.fillStyle = lavaPattern;
+    ctx.fill();
+    ctx.closePath();
+    ctx.globalAlpha = 0.99;
+    for (var i = 4; i > 0; i--) {
+      ctx.beginPath();
+      ctx.roundRect(l + i, t - i, w, 40, 4);
+      ctx.fillStyle = tinycolor("orange").darken(15).toString();
+      ctx.fill();
+      ctx.closePath();
+    }
+    ctx.beginPath();
+    ctx.roundRect(l, t, w, 40, 4);
+    ctx.fillStyle = "orange";
+    ctx.fill();
+    ctx.closePath();
+    ctx.globalAlpha = 1.0;
   }
 }
 
@@ -430,14 +471,16 @@ function createBush(x, y) {
   ctx.closePath();
 }
 
-function createCloud(x, y, o = 1.0) {
-  ctx.globalAlpha = o;
+function createCloud(cloud) {
+  ctx.globalAlpha = cloud.speed + 0.1;
   ctx.beginPath();
-  ctx.roundRect(x, y, 300, 40, 100);
+  ctx.roundRect(cloud.x - (gameState.players[id].x * cloud.speed) / 2, cloud.y - (gameState.players[id].y * cloud.speed) / 2, 300, cloud.speed * 50, 100);
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
   ctx.globalAlpha = 1.0;
+  cloud.x += cloud.speed;
+  if (cloud.x - (gameState.players[id].x * cloud.speed) / 2 > canvas.width) cloud.x = gameState.players[id].x - (canvas.width / 2) - 300;
 }
 
 function drawMap() {
@@ -461,25 +504,18 @@ function drawMap() {
   createObject(350, 0, 100, 50, "platform", "red");
   createObject(550, -250, 100, 50, "platform", "green");
   createObject(2200, 250, 200, 50, "platform", "indigo");
-  createObject(1800, 0, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(2200, -250, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(1800, -500, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(2200, -750, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(1800, -1000, 200, 50, "platform", "rgba(0, 0, 0, 0)");
-  createObject(2200, -1250, 200, 50, "platform", "rgba(0, 0, 0, 0)");
+  createObject(1800, 0, 200, 50, "platform", "yellow");
+  createObject(2200, -250, 200, 50, "platform", "red");
+  createObject(1800, -500, 200, 50, "platform", "orange");
+  createObject(2200, -750, 200, 50, "platform", "green");
+  createObject(1800, -1000, 200, 50, "platform", "indigo");
+  createObject(2200, -1250, 200, 50, "platform", "yellow");
   createObject(2500, -1400, 1000, 200, "ground");
 }
 
-function drawScenery(x, y) {
+function drawScenery() {
   ctx.globalCompositeOperation = "destination-over";
   createBgRect(-2200, -400, 1000, 500, "#8B4000");
-  createCloud(600 + (x / 1.15), -230 + (y / 1.15), 0.9);
-  createCloud(-600 + (x / 1.2), -200 + (y / 1.2), 0.8);
-  createCloud(-800 + (x / 1.08), -200 + (y / 1.08), 0.7);
-  createCloud(-300 + (x / 1.05), -200 + (y / 1.05), 0.9);
-  createCloud(0 + (x / 1.1), -200 + (y / 1.1), 0.8);
-  createCloud(300 + (x / 1.08), -250 + (y / 1.08), 0.9);
-  createCloud(800 + (x / 1.1), -270 + (y / 1.1));
   ctx.globalCompositeOperation = "source-over";
   createBush(-2450, -550);
   createBush(-2100, -550);
@@ -491,6 +527,7 @@ function drawScenery(x, y) {
   createBush(1600, 450);
   createBush(1950, 450);
   createFlower(200, 450);
+  createObject(-10000, 999, 20000, 500, "lava");
 }
 
 function go() {
@@ -565,10 +602,21 @@ function choose(powerup) {
 }
 
 sendData();
-setTimeout(() => {
+setInterval(sendData, 1000 / 60);
+dirt.onload = () => {
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
+  for (var i = 0; i < 10; i++) {
+    clouds[i] = {
+      x: Math.random() * canvas.width,
+      y: Math.floor(Math.random() * 100),
+      speed: Math.random() + 0.1,
+    }
+  }
   dirtPattern = ctx.createPattern(dirt, "repeat");
-  animate();
-}, 500);
+  lavaPattern = ctx.createPattern(lava, "repeat");
+  requestAnimationFrame(animate);
+};
 
 function animate() {
   requestAnimationFrame(animate);
@@ -602,13 +650,17 @@ function animate() {
   }
       
   if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
-    drawScenery(gameState.players[id].x, gameState.players[id].y);
+    drawScenery();
   } else {
-    drawScenery(canvas.width / 2, canvas.height / 2);
+    drawScenery();
   }
 
   ctx.restore();
   ctx.globalCompositeOperation = "destination-over";
+
+  for (var i = 0; i < clouds.length; i++) {
+    createCloud(clouds[i]);
+  }
 
   var x = gameState.players[id].x;
   var y = gameState.players[id].y;
@@ -620,15 +672,20 @@ function animate() {
   bgcliff.width = ratio * canvas.height;
   bgcliff.height = canvas.height;
 
+  bgmountain.width = ratio * canvas.height;
+  bgmountain.height = canvas.height;
+
   for (var i = 0; i < 7; i++) {
     ctx.drawImage(bg, -(x + (bg.width * 7.5 * (i - 3))) / scrollSpeed, (-(y) / scrollSpeed) + 200, bg.width, bg.height);
   }
 
-  ctx.globalAlpha = 0.7;
   for (var i = 0; i < 7; i++) {
     ctx.drawImage(bgcliff, (-(x + (bgcliff.width * 17 * (i - 3))) / (scrollSpeed * 2)) + 200, (-(y) / (scrollSpeed * 2)) + 100, bgcliff.width, bgcliff.height);
   }
-  ctx.globalAlpha = 1.0;
+
+  for (var i = 0; i < 6; i++) {
+    ctx.drawImage(bgmountain, (-(x + (bgmountain.width * 17 * (i - 3))) / ((scrollSpeed + 3) * 2)) - 150, (-(y) / ((scrollSpeed + 3) * 2)), bgmountain.width, bgmountain.height);
+  }
 
   ctx.beginPath();
   ctx.roundRect(-100, -100, 300, 300, 500);
@@ -657,6 +714,4 @@ function animate() {
   }
 
   document.getElementById("fps").innerText = fps;
-
-  setTimeout(sendData, 0);
 }
