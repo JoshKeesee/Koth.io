@@ -17,14 +17,21 @@ var keyUp = false;
 var keyDown = false;
 var gameState;
 var stop = false;
-var frameCount = 0;
-var fps, fpsInterval, startTime, now, then, elapsed;
+const decimalPlaces = 1;
+const updateEachSecond = 0.5;
+const decimalPlacesRatio = Math.pow(10, decimalPlaces);
+var timeMeasurements = [];
+var fps = 0;
 const dirt = new Image();
 dirt.src = "/images/dirt.jpg";
 var dirtPattern;
 const hill = new Image();
 hill.src = "/images/mountain.jpg";
-var hillPattern;
+var bg = new Image();
+bg.src = "/images/cliff.png";
+var bgcliff = new Image();
+bgcliff.src = "/images/bgcliff.png";
+const scrollSpeed = 9;
 
 const playerMovement = {
   u: false,
@@ -318,7 +325,7 @@ function createObject(l, t, w, h, type, color = "#000cfa", playerId) {
     for (var i = 4; i > 0; i--) {
       ctx.beginPath();
       ctx.roundRect(l + i, t - i, w, h, 4);
-      ctx.fillStyle = tinycolor("brown").darken(15).toString();
+      ctx.fillStyle = tinycolor("#542a01").toString();
       ctx.fill();
       ctx.closePath();
     }
@@ -423,54 +430,27 @@ function createBush(x, y) {
   ctx.closePath();
 }
 
-function createCloud(x, y) {
+function createCloud(x, y, o = 1.0) {
+  ctx.globalAlpha = o;
   ctx.beginPath();
-  ctx.roundRect(x, y, 100, 100, 100);
+  ctx.roundRect(x, y, 300, 40, 100);
   ctx.fillStyle = "white";
   ctx.fill();
   ctx.closePath();
-
-  ctx.beginPath();
-  ctx.roundRect(x + 80, y - 20, 100, 100, 100);
-  ctx.fillStyle = "white";
-  ctx.fill();
-  ctx.closePath();
-
-  ctx.beginPath();
-  ctx.roundRect(x + 160, y, 100, 100, 100);
-  ctx.fillStyle = "white";
-  ctx.fill();
-  ctx.closePath();
-
-  ctx.beginPath();
-  ctx.rect(x + 45, y + 10, 160, 90);
-  ctx.fillStyle = "white";
-  ctx.fill();
-  ctx.closePath();
-}
-
-function createHill(x, y, w, h, px, py) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x + px, y + py, w, h, 10000);
-  ctx.stroke();
-  ctx.closePath();
-  ctx.clip();
-  ctx.drawImage(hill, x + px, y + py, w, h);
-  ctx.restore();
+  ctx.globalAlpha = 1.0;
 }
 
 function drawMap() {
-  createObject(-1000, 500, 600, 200, "ground");
-  createObject(100, 500, 400, 200, "ground");
-  createObject(700, 500, 400, 200, "ground");
-  createObject(1400, 500, 700, 200, "ground");
+  createObject(-1000, 500, 600, 1000, "ground");
+  createObject(100, 500, 400, 1000, "ground");
+  createObject(700, 500, 400, 1000, "ground");
+  createObject(1400, 500, 700, 1000, "ground");
   createObject(-850, 100, 120, 50, "platform", "red");
   createObject(-500, -200, 120, 50, "platform", "yellow");
   createObject(-850, -400, 120, 50, "platform", "blue");
-  createObject(-2500, -500, 300, 1200, "ground");
+  createObject(-2500, -400, 300, 1400, "ground");
   createObject(-2500, -500, 1300, 200, "ground");
-  createObject(-2200, 10, 1000, 690, "ground");
+  createObject(-2200, 10, 1000, 990, "ground");
   createObject(-2000, -700, 120, 50, "platform", "yellow");
   createObject(-1600, -700, 120, 50, "platform", "red");
   createObject(-220, 350, 120, 50, "platform", "green");
@@ -493,28 +473,13 @@ function drawMap() {
 function drawScenery(x, y) {
   ctx.globalCompositeOperation = "destination-over";
   createBgRect(-2200, -400, 1000, 500, "#8B4000");
-  createHill(-700, 200, 1000, 3000, x / 2.5, y / 2.5);
-  createHill(300, 200, 1000, 3000, x / 2.3, y / 2.3);
-  createHill(-100, 100, 1000, 3000, x / 2, y / 2);
-  createHill(-500, 0, 900, 3000, x / 1.7, y / 1.7);
-  createHill(-50, -50, 900, 3000, x / 1.5, y / 1.5);
-  createHill(-400, -60, 900, 3000, x / 1.3, y / 1.3);
-  createHill(300, -70, 900, 3000, x / 1.2, y / 1.2);
-  createCloud(600 + (x / 1.15), -230 + (y / 1.15));
-  createCloud(-600 + (x / 1.2), -200 + (y / 1.2));
-  createCloud(-800 + (x / 1.08), -200 + (y / 1.08));
-  createHill(300, -50, 900, 3000, x / 1.2, y / 1.2);
-  createHill(-800, -50, 900, 3000, x / 1.15, y / 1.15);
-  createHill(-100, -50, 900, 3000, x / 1.1, y / 1.1);
-  createCloud(-300 + (x / 1.05), -200 + (y / 1.05));
-  createCloud(0 + (x / 1.1), -200 + (y / 1.1));
-  createCloud(300 + (x / 1.08), -250 + (y / 1.08));
+  createCloud(600 + (x / 1.15), -230 + (y / 1.15), 0.9);
+  createCloud(-600 + (x / 1.2), -200 + (y / 1.2), 0.8);
+  createCloud(-800 + (x / 1.08), -200 + (y / 1.08), 0.7);
+  createCloud(-300 + (x / 1.05), -200 + (y / 1.05), 0.9);
+  createCloud(0 + (x / 1.1), -200 + (y / 1.1), 0.8);
+  createCloud(300 + (x / 1.08), -250 + (y / 1.08), 0.9);
   createCloud(800 + (x / 1.1), -270 + (y / 1.1));
-  ctx.beginPath();
-  ctx.roundRect(-800 + (x / 1.01), -400 + (y / 1.01), 300, 300, 500);
-  ctx.fillStyle = "yellow";
-  ctx.fill();
-  ctx.closePath();
   ctx.globalCompositeOperation = "source-over";
   createBush(-2450, -550);
   createBush(-2100, -550);
@@ -567,6 +532,15 @@ function go() {
 
 socket.on("state", (state) => {
   gameState = state;
+
+  timeMeasurements.push(performance.now());
+
+  const msPassed = timeMeasurements[timeMeasurements.length - 1] - timeMeasurements[0];
+
+  if (msPassed >= updateEachSecond * 1000) {
+    fps = Math.round(timeMeasurements.length / msPassed * 1000 * decimalPlacesRatio) / decimalPlacesRatio;
+    timeMeasurements = [];
+  }
 });
 
 document.getElementById("name").addEventListener("keydown", (e) => {
@@ -592,82 +566,97 @@ function choose(powerup) {
 
 sendData();
 setTimeout(() => {
-  startAnimating(100);
-}, 500);
-
-function startAnimating(fps) {
   dirtPattern = ctx.createPattern(dirt, "repeat");
-  fpsInterval = 1000 / fps;
-  then = Date.now();
-  startTime = then;
   animate();
-}
+}, 500);
 
 function animate() {
   requestAnimationFrame(animate);
 
-  now = Date.now();
-  elapsed = now - then;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
+  playerMovement.cW = ctx.canvas.width;
+  playerMovement.cH = ctx.canvas.height;
+  playerMovement.platforms = [];
 
-  if (elapsed > fpsInterval) {
-    then = now - (elapsed % fpsInterval);
+  if (gameStarted && connected) {
+    ctx.save();
+    var player = gameState.players[id];
+    ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
+    drawMap();
+    drawPlayer(player, gameState.leaderboard);
+  } else {
+    ctx.save();
+    ctx.scale(0.8, 0.8);
+    ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
+    drawMap();
+  }
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.canvas.width = window.innerWidth;
-    ctx.canvas.height = window.innerHeight;
-    playerMovement.cW = ctx.canvas.width;
-    playerMovement.cH = ctx.canvas.height;
-    playerMovement.platforms = [];
-
-    if (gameStarted && connected) {
-      ctx.save();
-      var player = gameState.players[id];
-      ctx.translate(-1 * (player.x - ctx.canvas.width / 2) - player.w / 2, -1 * (player.y - ctx.canvas.height / 2) - player.h / 2);
-      drawMap();
-      drawPlayer(player, gameState.leaderboard);
-    } else {
-      ctx.save();
-      ctx.scale(0.8, 0.8);
-      ctx.translate(-1 * (600 - ctx.canvas.width / 1.6), -1 * (300 - ctx.canvas.height / 1.6));
-      drawMap();
-    }
-
-    if (gameState !== 0) {
-      for (var i = 0; i < Object.keys(gameState.players).length; i++) {
-        if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
-          drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
-        }
+  if (gameState !== 0) {
+    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+      if (gameState.players[Object.keys(gameState.players)[i]].id !== id && gameState.players[Object.keys(gameState.players)[i]].name !== null) {
+        drawPlayer(gameState.players[Object.keys(gameState.players)[i]], gameState.leaderboard);
       }
     }
-        
-    if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
-      drawScenery(gameState.players[id].x, gameState.players[id].y);
-    } else {
-      drawScenery(canvas.width / 2, canvas.height / 2);
-    }
-
-    ctx.restore();
-    ctx.beginPath();
-    ctx.globalCompositeOperation = "destination-over";
-    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = "skyblue";
-    ctx.fill();
-    ctx.closePath();
-    
-    for (var i = 0; i < 3; i++) {
-      document.getElementById("name" + (i + 1)).innerHTML = "";
-    }
-    
-    for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
-      document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
-    }
-
-    if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
-      document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
-    } else {
-      document.getElementById("currName").innerHTML = "";
-    }
-
-    setTimeout(sendData, 0);
   }
+      
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id && connected) {
+    drawScenery(gameState.players[id].x, gameState.players[id].y);
+  } else {
+    drawScenery(canvas.width / 2, canvas.height / 2);
+  }
+
+  ctx.restore();
+  ctx.globalCompositeOperation = "destination-over";
+
+  var x = gameState.players[id].x;
+  var y = gameState.players[id].y;
+
+  var ratio = canvas.width / canvas.height;
+  bg.width = ratio * canvas.height;
+  bg.height = canvas.height;
+
+  bgcliff.width = ratio * canvas.height;
+  bgcliff.height = canvas.height;
+
+  for (var i = 0; i < 7; i++) {
+    ctx.drawImage(bg, -(x + (bg.width * 7.5 * (i - 3))) / scrollSpeed, (-(y) / scrollSpeed) + 200, bg.width, bg.height);
+  }
+
+  ctx.globalAlpha = 0.7;
+  for (var i = 0; i < 7; i++) {
+    ctx.drawImage(bgcliff, (-(x + (bgcliff.width * 17 * (i - 3))) / (scrollSpeed * 2)) + 200, (-(y) / (scrollSpeed * 2)) + 100, bgcliff.width, bgcliff.height);
+  }
+  ctx.globalAlpha = 1.0;
+
+  ctx.beginPath();
+  ctx.roundRect(-100, -100, 300, 300, 500);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.closePath();
+  
+  ctx.beginPath();
+  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = "skyblue";
+  ctx.fill();
+  ctx.closePath();
+  
+  for (var i = 0; i < 3; i++) {
+    document.getElementById("name" + (i + 1)).innerHTML = "";
+  }
+  
+  for (var i = 0; i < Object.keys(gameState.leaderboard).length && i < 3; i++) {
+    document.getElementById("name" + (i + 1)).innerHTML = i + 1 + ") " + gameState.players[Object.keys(gameState.leaderboard)[i]].name + "<br>" +  gameState.leaderboard[Object.keys(gameState.leaderboard)[i]];
+  }
+
+  if (Object.keys(gameState.players[id]).length !== 0 && gameState.players[id].id === id) { 
+    document.getElementById("currName").innerHTML = "You) " + gameState.leaderboard[id];
+  } else {
+    document.getElementById("currName").innerHTML = "";
+  }
+
+  document.getElementById("fps").innerText = fps;
+
+  setTimeout(sendData, 0);
 }
