@@ -131,6 +131,11 @@ setInterval(updateWeather, 30000);
 
 function updateWeather() {
   gameState.weather = weather[Math.floor(Math.random() * weather.length)];
+  if (gameState.weather === "rainy") {
+    socket.emit("rain");
+  } else {
+    socket.emit("no rain");
+  }
 }
 
 function switchColor(player) {

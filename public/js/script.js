@@ -627,6 +627,15 @@ socket.on("hit", () => {
   hit.play();
 });
 
+socket.on("rain", () => {
+  rain.play();
+});
+
+socket.on("no rain", () => {
+  rain.currentTime = 0;
+  rain.pause();
+});
+
 function choose(powerup) {
   document.getElementById("speed").classList.remove("-translate-y-2");
   document.getElementById("jumps").classList.remove("-translate-y-2");
@@ -737,6 +746,8 @@ function animate() {
   }
 
   if (lastWeather === "rainy" && gameState.weather !== "rainy") {
+    raindrops = [];
+  } else if (gameState.weather === "rainy" && lastWeather !== "rainy") {
     for (var i = 0; i < 100; i++) {
       raindrops[i] = {
         x: Math.random() * (canvas.width + 100) - 100,
@@ -747,7 +758,6 @@ function animate() {
   }
 
   if (gameState.weather === "sunny") {
-    rain.pause();
     darkness += 0.2 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
@@ -761,7 +771,6 @@ function animate() {
     ctx.fill();
     ctx.closePath();
   } else if (gameState.weather === "rainy") {
-    rain.play();
     darkness += 0.2 * (0.5 - darkness);
     ctx.beginPath();
     ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -774,7 +783,6 @@ function animate() {
       createRaindrop(raindrops[i]);
     }
   } else {
-    rain.pause();
     darkness += 0.2 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
