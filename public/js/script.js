@@ -41,6 +41,7 @@ const clouds = [];
 const raindrops = [];
 var lastWeather = "sunny";
 var darkness = 0;
+var rain = new Audio("/music/Rain.mp3");
 document.getElementById("name").value = localStorage.getItem("name") || "";
 
 const playerMovement = {
@@ -746,6 +747,7 @@ function animate() {
   }
 
   if (gameState.weather === "sunny") {
+    rain.pause();
     darkness += 0.2 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
@@ -759,6 +761,7 @@ function animate() {
     ctx.fill();
     ctx.closePath();
   } else if (gameState.weather === "rainy") {
+    rain.play();
     darkness += 0.2 * (0.5 - darkness);
     ctx.beginPath();
     ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -771,6 +774,7 @@ function animate() {
       createRaindrop(raindrops[i]);
     }
   } else {
+    rain.pause();
     darkness += 0.2 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
