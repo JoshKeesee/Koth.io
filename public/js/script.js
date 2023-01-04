@@ -38,6 +38,7 @@ const bgmountain = new Image();
 bgmountain.src = "/images/bgmountain.png";
 const scrollSpeed = 9;
 const clouds = [];
+document.getElementById("name").value = sessionStorage.getItem("name") || "";
 
 const playerMovement = {
   u: false,
@@ -532,6 +533,7 @@ function go() {
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("disconnected").classList.add("hidden");
   var name = document.getElementById("name").value;
+  sessionStorage.setItem("name", name);
   document.getElementById("gameMusic").play();
   gameStarted = true;
 
