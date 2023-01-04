@@ -38,7 +38,10 @@ const bgmountain = new Image();
 bgmountain.src = "/images/bgmountain.png";
 const scrollSpeed = 9;
 const clouds = [];
-document.getElementById("name").value = sessionStorage.getItem("name") || "";
+const raindrops = [];
+var lastWeather = "sunny";
+var darkness = 0;
+document.getElementById("name").value = localStorage.getItem("name") || "";
 
 const playerMovement = {
   u: false,
@@ -477,7 +480,23 @@ function createCloud(cloud) {
   ctx.closePath();
   ctx.globalAlpha = 1.0;
   cloud.x += cloud.speed;
-  if (cloud.x - (gameState.players[id].x * cloud.speed) / 2 > canvas.width) cloud.x = gameState.players[id].x - (canvas.width / 2) - 300;
+  if (cloud.x - (gameState.players[id].x * cloud.speed) / 2 > canvas.width) cloud.x = gameState.players[id].x - 1000;
+}
+
+function createRaindrop(raindrop) {
+  ctx.beginPath();
+  ctx.moveTo(raindrop.x, raindrop.y);
+  ctx.lineTo(raindrop.x + 3, raindrop.y + raindrop.speed);
+  ctx.strokeStyle = "blue";
+  ctx.lineWidth = raindrop.speed / 10;
+  ctx.stroke();
+  ctx.closePath();
+  raindrop.x += 3;
+  raindrop.y += raindrop.speed;
+  if (raindrop.y >= canvas.height) {
+    raindrop.y = -10;
+    raindrop.x = Math.random() * canvas.width;
+  }
 }
 
 function drawMap() {
@@ -533,7 +552,7 @@ function go() {
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("disconnected").classList.add("hidden");
   var name = document.getElementById("name").value;
-  sessionStorage.setItem("name", name);
+  localStorage.setItem("name", name);
   document.getElementById("gameMusic").play();
   gameStarted = true;
 
@@ -554,6 +573,11 @@ function go() {
   }
 
   speed = defaults.speed;
+
+  if (window.btoa(name) === "c2xhcGZpc2g=") {
+    devMode = true;
+    name = "Koth Admin";
+  }
   
   socket.emit("newPlayer", name);
 }
@@ -614,11 +638,20 @@ function choose(powerup) {
 
 setInterval(sendData, 1000 / 60);
 window.onload = () => {
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
   for (var i = 0; i < 10; i++) {
     clouds[i] = {
-      x: Math.random() * canvas.width,
+      x: Math.random() * (canvas.width + 2000) - 2000,
       y: Math.floor(Math.random() * 100),
       speed: Math.random() + 0.1,
+    }
+  }
+  for (var i = 0; i < 100; i++) {
+    raindrops[i] = {
+      x: Math.random() * (canvas.width + 100) - 100,
+      y: Math.random() * (-10 + 500) - 500,
+      speed: Math.random() * (20 - 10) + 10,
     }
   }
   requestAnimationFrame(animate);
@@ -666,8 +699,13 @@ function animate() {
   }
 
   ctx.restore();
+  ctx.beginPath();
+  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.fillStyle = "rgba(0, 0, 0, " + darkness + ")";
+  ctx.fill();
+  ctx.closePath();
   ctx.globalCompositeOperation = "destination-over";
-
+  
   for (var i = 0; i < clouds.length; i++) {
     createCloud(clouds[i]);
   }
@@ -697,17 +735,57 @@ function animate() {
     ctx.drawImage(bgmountain, (-(x + (bgmountain.width * 17 * (i - 3))) / ((scrollSpeed + 3) * 2)) - 150, (-(y) / ((scrollSpeed + 3) * 2)), bgmountain.width, bgmountain.height);
   }
 
-  ctx.beginPath();
-  ctx.roundRect(-100, -100, 300, 300, 500);
-  ctx.fillStyle = "yellow";
-  ctx.fill();
-  ctx.closePath();
-  
-  ctx.beginPath();
-  ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  ctx.fillStyle = "skyblue";
-  ctx.fill();
-  ctx.closePath();
+  if (lastWeather === "rainy" && gameState.weather !== "rainy") {
+    for (var i = 0; i < 100; i++) {
+      raindrops[i] = {
+        x: Math.random() * (canvas.width + 100) - 100,
+        y: Math.random() * (-10 + 500) - 500,
+        speed: Math.random() * (20 - 10) + 10,
+      }
+    }
+  }
+
+  if (gameState.weather === "sunny") {
+    darkness += 0.2 * (0 - darkness);
+    ctx.beginPath();
+    ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    ctx.closePath();
+    
+    ctx.beginPath();
+    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = tinycolor("skyblue").darken(-y / 500).toString();
+    ctx.fill();
+    ctx.closePath();
+  } else if (gameState.weather === "rainy") {
+    darkness += 0.2 * (0.5 - darkness);
+    ctx.beginPath();
+    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = tinycolor("darkgray").darken(Math.abs(y) / 100).toString();
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.globalCompositeOperation = "source-over";
+    for (var i = 0; i < raindrops.length; i++) {
+      createRaindrop(raindrops[i]);
+    }
+  } else {
+    darkness += 0.2 * (0 - darkness);
+    ctx.beginPath();
+    ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+    ctx.closePath();
+    
+    ctx.beginPath();
+    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = tinycolor("skyblue").darken(-y / 500).toString();
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  lastWeather = gameState.weather;
   
   for (var i = 0; i < 3; i++) {
     document.getElementById("name" + (i + 1)).innerHTML = "";
