@@ -55,7 +55,8 @@
         <input id="name" type="text" placeholder="Enter your name..." class="text-center p-1 rounded-xl border-2 border-blue-500 text-black focus:outline-none focus:ring-2 transition-all" autofocus maxlength="10" />
         <button id="play" onclick="go()" class="font-bold p-2 bg-blue-500 hover:scale-110 transition-all rounded-xl">Play</button>
       </div>
-      <div id="disconnected" class="text-red-500 font-black text-lg font-sans mt-2 hidden">Connection lost...</div>
+      <button onclick="generateName()" class="font-bold my-2 p-2 bg-green-500 hover:scale-110 transition-all rounded-xl text-base font-sans">Generate Name</button>
+      <div id="disconnected" class="text-red-500 font-black text-lg font-sans hidden">Connection lost...</div>
     </div>
     <div id="powerups" class="grid lg:grid-cols-4 md:grid-cols-4 grid-cols-2 lg:gap-4 md:gap-4 gap-2 relative left-[50%] -mt-24 w-fit translate-x-[-50%] text-white text-center lg:text-2xl md:text-lg text-md font-sans font-bold">
       <div id="speed" class="rounded-xl bg-blue-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-blue-700 transform -translate-y-2 transition-all" onclick="choose(this.id)">
@@ -64,11 +65,11 @@
       <div id="jumps" class="rounded-xl bg-red-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-red-700 transform transition-all" onclick="choose(this.id)">
         Double Jump
       </div>
-      <div id="padding" class="rounded-xl bg-green-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-green-700 transform transition-all" onclick="choose(this.id)">
-        Xtra Padding
-      </div>
-      <div id="force" class="rounded-xl bg-yellow-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-yellow-700 transform transition-all" onclick="choose(this.id)">
+      <div id="force" class="rounded-xl bg-green-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-green-700 transform transition-all" onclick="choose(this.id)">
         Hit Force
+      </div>
+      <div id="regen" class="rounded-xl bg-yellow-500 lg:p-4 md:p-4 p-1 cursor-pointer border-b-4 border-yellow-700 transform transition-all" onclick="choose(this.id)">
+        5x Regen
       </div>
     </div>
   </div>

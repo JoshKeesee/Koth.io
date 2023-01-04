@@ -38,9 +38,6 @@ const bgmountain = new Image();
 bgmountain.src = "/images/bgmountain.png";
 const scrollSpeed = 9;
 const clouds = [];
-var cameraX = 0;
-var cameraY = 0;
-const cameraSmoothing = 3;
 
 const playerMovement = {
   u: false,
@@ -48,8 +45,6 @@ const playerMovement = {
   r: false,
   d: false,
   flying: false,
-  cW: ctx.canvas.width,
-  cH: ctx.canvas.height,
   platforms: []
 };
 
@@ -129,29 +124,9 @@ const mouseMoveHandler = (e) => {
 };
 
 const drawPlayer = (player, leaderboard) => {
-  if (player.num === 1) {
-    color = "#0095DD";
-  } else if (player.num === 2) {
-    color = "red";
-  } else if (player.num === 3) {
-    color = "green";
-  } else if (player.num === 4) {
-    color = "indigo";
-  } else if (player.num === 5) {
-    color = "orange";
-  } else if (player.num === 6) {
-    color = "blue";
-  } else if (player.num === 7) {
-    color = "purple";
-  } else if (player.num === 8) {
-    color = "yellow";
-  } else {
-    color = "black";
-  }
-  
   ctx.beginPath();
   ctx.roundRect(player.x, player.y, player.w, player.h, 15);
-  ctx.fillStyle = color;
+  ctx.fillStyle = player.color;
   ctx.fill();
   ctx.closePath();
 
@@ -226,24 +201,50 @@ const drawPlayer = (player, leaderboard) => {
       ctx.fillStyle = "rgba(0, 0, 150, " + (player.h + 30) / 100 + ")";
       ctx.font = "bold 30px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(player.name, player.x + (player.w / 2), player.y - 40);
+      ctx.fillText(player.name, player.x + (player.w / 2), player.y - 60);
+
+      ctx.beginPath();
+      ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 50, 100, 10, 10);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.closePath();
+  
+      ctx.beginPath();
+      ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 50.3, 100 - player.damage, 10.6, 10);
+      ctx.fillStyle = "green";
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.beginPath();
+      ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 50, 100, 10, 10);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "white";
+      ctx.stroke();
+      ctx.closePath();
     }
   } else if (player.name !== null) {
     ctx.fillStyle = "rgba(0, 0, 150, " + (player.h + 30) / 100 + ")";
     ctx.font = "bold 30px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(player.name, player.x + (player.w / 2), player.y - 10);
+    ctx.fillText(player.name, player.x + (player.w / 2), player.y - 25);
 
     ctx.beginPath();
-    ctx.rect(player.x, player.y - 60, player.w, 20);
-    ctx.strokeStyle = "green";
-    ctx.stroke();
+    ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 15, 100, 10, 10);
+    ctx.fillStyle = "red";
+    ctx.fill();
     ctx.closePath();
 
     ctx.beginPath();
-    ctx.rect(player.x, player.y - 60, player.w - (player.damage / player.w), 20);
-    ctx.fillStyle = "green";
+    ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 15.3, 100 - player.damage, 10.6, 10);
+    ctx.fillStyle = tinycolor("green").brighten(15).toString();
     ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.roundRect(player.x + (player.w / 2) - 50, player.y - 15, 100, 10, 10);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "white";
+    ctx.stroke();
     ctx.closePath();
   }
 
@@ -260,11 +261,6 @@ const drawPlayer = (player, leaderboard) => {
       jump.play();
     } else {
       lastJumpVal = player.jumping;
-    }
-
-    if (player.touching) {
-      var bounce = new Audio("/music/Bounce.mp3");
-      bounce.play();
     }
   }
 };
@@ -488,8 +484,8 @@ function drawMap() {
   createObject(100, 500, 400, 1000, "ground");
   createObject(700, 500, 400, 1000, "ground");
   createObject(1400, 500, 700, 1000, "ground");
-  createObject(-850, 100, 120, 50, "platform", "red");
-  createObject(-500, -200, 120, 50, "platform", "yellow");
+  createObject(-850, 150, 120, 50, "platform", "red");
+  createObject(-500, -150, 120, 50, "platform", "yellow");
   createObject(-850, -400, 120, 50, "platform", "blue");
   createObject(-2500, -400, 300, 1400, "ground");
   createObject(-2500, -500, 1300, 200, "ground");
@@ -527,7 +523,7 @@ function drawScenery() {
   createBush(1600, 450);
   createBush(1950, 450);
   createFlower(200, 450);
-  createObject(-10000, 999, 20000, 500, "lava");
+  createObject(-100000, 999, 200000, 500, "lava");
 }
 
 function go() {
@@ -543,26 +539,19 @@ function go() {
   defaults.jumps = 1;
   defaults.padding = 1;
   defaults.force = 2;
+  defaults.regen = 1;
 
   if (document.getElementById("speed").classList.contains("-translate-y-2")) {
     defaults.speed = 1.5;
   } else if (document.getElementById("jumps").classList.contains("-translate-y-2")) {
     defaults.jumps = 2;
-  } else if (document.getElementById("padding").classList.contains("-translate-y-2")) {
-    defaults.padding = 0.7;
   } else if (document.getElementById("force").classList.contains("-translate-y-2")) {
     defaults.force = 4;
+  } else if (document.getElementById("regen").classList.contains("-translate-y-2")) {
+    defaults.regen = 5;
   }
 
   speed = defaults.speed;
-
-  if (window.btoa(name) === "c2xhcGZpc2g=") {
-    devMode = true;
-    name = "A Cheater Using Hacks";
-  } else if (window.btoa(name) === "aW5maW5qdW1wcw==") {
-    defaults.jumps = 1e100;
-    name = "A Cheater Using Hacks";
-  }
   
   socket.emit("newPlayer", name);
 }
@@ -591,21 +580,38 @@ socket.on("add score", (player) => {
   socket.emit("update leaderboard", player);
 });
 
+socket.on("respawn", () => {
+  var respawn = new Audio("/music/Break.wav");
+  respawn.play();
+});
+
+socket.on("bounce", () => {
+  var bounce = new Audio("/music/Bounce.mp3");
+  bounce.play();
+});
+
+socket.on("hit lava", () => {
+  var lavaSfx = new Audio("/music/Sizzle.mp3");
+  lavaSfx.play();
+});
+
+socket.on("hit", () => {
+  var hit = new Audio("/music/Hit.mp3");
+  hit.play();
+});
+
 function choose(powerup) {
   document.getElementById("speed").classList.remove("-translate-y-2");
   document.getElementById("jumps").classList.remove("-translate-y-2");
-  document.getElementById("padding").classList.remove("-translate-y-2");
   document.getElementById("force").classList.remove("-translate-y-2");
+  document.getElementById("regen").classList.remove("-translate-y-2");
   document.getElementById(powerup).classList.add("-translate-y-2");
   var click = new Audio("/music/click.mp3");
   click.play();
 }
 
-sendData();
 setInterval(sendData, 1000 / 60);
-dirt.onload = () => {
-  ctx.canvas.width = window.innerWidth;
-  ctx.canvas.height = window.innerHeight;
+window.onload = () => {
   for (var i = 0; i < 10; i++) {
     clouds[i] = {
       x: Math.random() * canvas.width,
@@ -613,9 +619,13 @@ dirt.onload = () => {
       speed: Math.random() + 0.1,
     }
   }
-  dirtPattern = ctx.createPattern(dirt, "repeat");
-  lavaPattern = ctx.createPattern(lava, "repeat");
   requestAnimationFrame(animate);
+};
+dirt.onload = () => {
+  dirtPattern = ctx.createPattern(dirt, "repeat");
+};
+lava.onload = () => {
+  lavaPattern = ctx.createPattern(lava, "repeat");
 };
 
 function animate() {
@@ -624,8 +634,6 @@ function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
-  playerMovement.cW = ctx.canvas.width;
-  playerMovement.cH = ctx.canvas.height;
   playerMovement.platforms = [];
 
   if (gameStarted && connected) {
@@ -714,4 +722,11 @@ function animate() {
   }
 
   document.getElementById("fps").innerText = fps;
+}
+
+var adjective = ["Excited", "Anxious", "Overweight", "Jumpy", "Squashed", "Broad", "Crooked", "Curved", "Deep", "Even", "Anxious", "Jumpy", "Squashed", "Broad", "Crooked", "Curved", "Deep", "Even", "Flat", "Hilly", "Jagged", "Round", "Shallow", "Square", "Steep", "Straight", "Thick", "Thin", "Cooing", "Faint", "Harsh", "Hissing", "Hushed", "Husky", "Loud", "Melodic", "Moaning", "Mute", "Noisy", "Purring", "Quiet", "Raspy", "Shrill", "Silent", "Soft", "Squeaky"];
+var object = ["Taco", "Sphere", "Watermelon", "Cheeseburger", "Spider", "Dragon", "Soda", "Watch", "Sunglasses", "T-shirt", "Purse", "Towel", "Hat", "Camera", "Photo", "Cat", "Dog"];
+
+function generateName() {
+ document.getElementById("name").value = adjective[Math.floor(Math.random() * adjective.length)] + object[Math.floor(Math.random() * object.length)];
 }

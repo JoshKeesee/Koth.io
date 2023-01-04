@@ -26,6 +26,7 @@ var defaults = {};
 var currUserName = 0;
 var playerNum = 0;
 const port = process.env.PORT || 3000;
+var regen;
 
 app.use(express.static(__dirname + "/public"));
 app.use(favicon(__dirname + '/public/favicon.ico'));
@@ -37,7 +38,8 @@ app.get("/", (req, res) => {
 io.on("connection", (socket) => {
   gameState.players[socket.id] = {
     name: null,
-    lt: null
+    lt: null,
+    damage: 0,
   };
 
   socket.on("disconnect", () => {
@@ -49,6 +51,8 @@ io.on("connection", (socket) => {
 
     delete gameState.players[socket.id];
     delete gameState.leaderboard[socket.id];
+
+    clearInterval(regen);
   });
 
   socket.on("newPlayer", (name) => {
@@ -79,9 +83,12 @@ io.on("connection", (socket) => {
       knockback: 1,
       touching: false,
       damage: 0,
+      color: "#0095DD",
     };
 
     gameState.leaderboard[socket.id] = 0;
+
+    switchColor(gameState.players[socket.id]);
   });
 
   socket.on("playerMovement", (data) => {
@@ -98,7 +105,7 @@ io.on("connection", (socket) => {
     const player = gameState.players[socket.id];
     player.speed = data[2];
     player.pushForce = data[1].force;
-    player.knockback = data[1].padding;
+    player.regen = data[1].regen;
     player.touching = false;
 
     if (playerMovement.l) {
@@ -151,7 +158,7 @@ io.on("connection", (socket) => {
       player.yVel *= defaults.resistance;
     }
 
-    collision(player, playerMovement.platforms, playerMovement);
+    collision(player, playerMovement.platforms, playerMovement, socket);
 
     player.xVel *= defaults.resistance;
     player.y += player.yVel;
@@ -180,6 +187,7 @@ io.on("connection", (socket) => {
     }
 
     if (player.damage >= 100) {
+      socket.emit("respawn");
       respawn(player);
     }
   });
@@ -191,7 +199,36 @@ io.on("connection", (socket) => {
   setInterval(() => {
     socket.emit("state", gameState);
   }, 1000 / 70);
+
+  regen = setInterval(() => {
+    var player = gameState.players[socket.id];
+    if (player.damage > 0) {
+      player.damage -= player.regen;
+    }
+  }, 1000);
 });
+
+function switchColor(player) {
+  if (player.num === 1) {
+    player.color = "#0095DD";
+  } else if (player.num === 2) {
+    player.color = "red";
+  } else if (player.num === 3) {
+    player.color = "green";
+  } else if (player.num === 4) {
+    player.color = "indigo";
+  } else if (player.num === 5) {
+    player.color = "orange";
+  } else if (player.num === 6) {
+    player.color = "blue";
+  } else if (player.num === 7) {
+    player.color = "purple";
+  } else if (player.num === 8) {
+    player.color = "yellow";
+  } else {
+    player.color = "black";
+  }
+}
 
 function respawn(player) {
   player.yVel = 0;
@@ -218,16 +255,16 @@ function colliding(r1, r2) {
 }
 
 function colR(r1, r2) {
-  if (r1.xVel >= -5 && r1.xVel <= 0) {
-    return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - 5);
+  if (r1.xVel >= -10 && r1.xVel <= 0) {
+    return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - 10);
   } else {
     return (r1.x < r2.l + r2.w && r1.x > r2.l + r2.w - Math.abs(r1.xVel));
   }
 }
 
 function colL(r1, r2) {
-  if (r1.xVel <= 5 && r1.xVel >= 0) {
-    return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + 5);
+  if (r1.xVel <= 10 && r1.xVel >= 0) {
+    return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + 10);
   } else {
     return (r1.x + r1.w > r2.l && r1.x + r1.w < r2.l + Math.abs(r1.xVel));
   }
@@ -249,77 +286,145 @@ function colT(r1, r2) {
   }
 }
 
-function collision(player, platforms, playerMovement) {
+function collision(player, platforms, playerMovement, socket) {
   for (let i = 0; i < platforms.length; i++) {
     var playerId = platforms[i].playerId;
     var type = platforms[i].type;
     if (colliding(player, platforms[i])) {
-      if (type !== "lava") {
-        if (colT(player, platforms[i])) {
-          if (type === "player") {
-            player.y = platforms[i].t - player.h;
-            player.touching = true;
-            player.yVel = 0 - (player.yVel * 0.8);
-            gameState.players[playerId].lt = player.id;
-            if (playerMovement.u) {
-              player.yVel -= defaults.jumpForce;
-            }
-          } else {
-            player.y = platforms[i].t - player.h;
-            player.yVel = 0;
-          }  
-          player.jumps = 0;
-        }
-  
-        if (colL(player, platforms[i])) {
-          if (type === "player") {
-            player.touching = true;
-            if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-              player.xVel = 0 - (player.xVel * defaults.resistance);
-              gameState.players[playerId].damage += 10;
-            } else {
-              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
-              player.damage += 10;
-            }
-            gameState.players[playerId].lt = player.id;
-          } else {
-            player.xVel = 0;
+      if (colT(player, platforms[i])) {
+        if (type === "player") {
+          socket.emit("bounce");
+          if (!player.jumping) {
+            player.h = player.h - Math.abs(player.yVel);
           }
+          player.y = platforms[i].t - player.h;
+          player.touching = true;
+          player.yVel = 0 - (player.yVel * defaults.resistance);
+          gameState.players[playerId].lt = player.id;
+          if (playerMovement.u) {
+            player.yVel -= defaults.jumpForce;
+          }
+        } else if (type === "lava") {
+          if (!player.jumping) {
+            player.h = player.h - Math.abs(player.yVel);
+          }
+          player.y = platforms[i].t - player.h;
+          player.yVel = 0 - (player.yVel * 0.8);
+          player.damage += 30;
+          player.color = "red";
+            setTimeout(() => {
+            switchColor(player);
+          }, 100);
+          if (player.damage < 100) {
+            socket.emit("hit lava");
+          }
+        } else {
+          if (player.yVel >= 20) {
+            socket.emit("hit");
+            player.damage += 10;
+            player.color = "red";
+            setTimeout(() => {
+              switchColor(player);
+            }, 100);
+          }
+          if (!player.jumping) {
+            player.h = player.h - Math.abs(player.yVel);
+          }
+          player.y = platforms[i].t - player.h - 0.2;
+          player.yVel = 0;
+        }  
+        player.jumps = 0;
+      }
+
+      if (colL(player, platforms[i])) {
+        if (type === "player") {
+          socket.emit("bounce");
+          player.touching = true;
+          if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
+            gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
+            player.xVel = 0 - (player.xVel * defaults.resistance);
+            gameState.players[playerId].damage += 10;
+          } else {
+            player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+            player.damage += 10;
+            player.color = "red";
+            setTimeout(() => {
+              switchColor(player);
+            }, 100);
+          }
+          gameState.players[playerId].lt = player.id;
+        } else if (type === "lava") {
           player.x = platforms[i].l - player.w;
+          player.xVel = 0 - (player.xVel * 0.8);
+          player.damage += 30;
+          player.color = "red";
+          setTimeout(() => {
+            switchColor(player);
+          }, 100);
+          socket.emit("hit lava");
+        } else {
           player.xVel = 0;
+          player.x = platforms[i].l - player.w - 0.2;
         }
-  
-        if (colR(player, platforms[i])) {
-          if (type === "player") {
-            player.touching = true;
-            if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
-              gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
-              player.xVel = 0 - (player.xVel * defaults.resistance);
-              gameState.players[playerId].damage += 10;
-            } else {
-              player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
-              player.damage += 10;
-            }
-            gameState.players[playerId].lt = player.id;
+      }
+
+      if (colR(player, platforms[i])) {
+        if (type === "player") {
+          socket.emit("bounce");
+          player.touching = true;
+          if (Math.abs(player.xVel) > Math.abs(gameState.players[playerId].xVel)) {
+            gameState.players[playerId].xVel = (player.xVel * player.pushForce) * gameState.players[playerId].knockback;
+            player.xVel = 0 - (player.xVel * defaults.resistance);
+            gameState.players[playerId].damage += 10;
+            player.color = "red";
+            setTimeout(() => {
+              switchColor(player);
+            }, 100);
           } else {
-            player.xVel = 0;
+            player.xVel = gameState.players[playerId].xVel * gameState.players[playerId].pushForce;
+            player.damage += 10;
+            player.color = "red";
+            setTimeout(() => {
+              switchColor(player);
+            }, 100);
           }
+          gameState.players[playerId].lt = player.id;
+        } else if (type === "lava") {
           player.x = platforms[i].l + platforms[i].w;
+          player.xVel = 0 - (player.xVel * 0.8);
+          player.damage += 30;
+          player.color = "red";
+          setTimeout(() => {
+            switchColor(player);
+          }, 100);
+          socket.emit("hit lava");
+        } else {
           player.xVel = 0;
+          player.x = platforms[i].l + platforms[i].w + 0.2;
         }
-  
-        if (colB(player, platforms[i])) {
-          if (type === "player") {
-            player.touching = true;
-            gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
-            gameState.players[playerId].lt = player.id;
-          }
+      }
+
+      if (colB(player, platforms[i])) {
+        if (type === "player") {
+          socket.emit("bounce");
+          player.touching = true;
+          gameState.players[playerId].yVel = (player.yVel * player.pushForce) * gameState.players[playerId].knockback;
+          gameState.players[playerId].lt = player.id;
+          player.yVel = 1;
+        } else if (type === "lava") {
           player.y = platforms[i].t + platforms[i].h;
+          player.yVel = 0 - (player.yVel * 0.8);
+          player.damage += 30;
+          player.color = "red";
+          setTimeout(() => {
+            switchColor(player);
+          }, 100);
+          socket.emit("hit lava");
+        } else {
+          player.h = player.h - Math.abs(player.yVel);
+          player.y = platforms[i].t + platforms[i].h + 0.2;
           player.yVel = 1;
         }
-      } else {
-        respawn(player);
       }
     }
   }
