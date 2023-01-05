@@ -22,6 +22,7 @@ const updateEachSecond = 0.5;
 const decimalPlacesRatio = Math.pow(10, decimalPlaces);
 var timeMeasurements = [];
 var fps = 0;
+const FPS = 50;
 const dirt = new Image();
 dirt.src = "/images/dirt.jpg";
 var dirtPattern;
@@ -39,9 +40,12 @@ bgmountain.src = "/images/bgmountain.png";
 const scrollSpeed = 9;
 const clouds = [];
 var raindrops = [];
+var snowflakes = [];
 var lastWeather = "sunny";
 var darkness = 0;
 var rain = new Audio("/music/Rain.mp3");
+rain.volume = 0.7;
+rain.loop = true;
 document.getElementById("name").value = localStorage.getItem("name") || "";
 
 const playerMovement = {
@@ -500,6 +504,22 @@ function createRaindrop(raindrop) {
   }
 }
 
+function createSnowflake(snowflake) {
+  ctx.beginPath();
+  ctx.roundRect(snowflake.x, snowflake.y, snowflake.speed * 1.5, snowflake.speed * 1.5, snowflake.speed * 1.5);
+  ctx.fillStyle = "white";
+  ctx.fill();
+  ctx.closePath();
+  snowflake.velocity++;
+  snowflake.y += snowflake.speed;
+  snowflake.x += Math.sin(( Math.PI / 60 ) * snowflake.velocity);
+  if (snowflake.y >= canvas.height) {
+    snowflake.y = -10;
+    snowflake.x = Math.random() * canvas.width;
+    snowflake.velocity = 0;
+  }
+}
+
 function drawMap() {
   createObject(-1000, 500, 600, 1000, "ground");
   createObject(100, 500, 400, 1000, "ground");
@@ -646,7 +666,7 @@ function choose(powerup) {
   click.play();
 }
 
-setInterval(sendData, 1000 / 60);
+setInterval(sendData, 1000 / FPS);
 window.onload = () => {
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
@@ -662,6 +682,14 @@ window.onload = () => {
       x: Math.random() * (canvas.width + 100) - 100,
       y: Math.random() * (-10 + 500) - 500,
       speed: Math.random() * (20 - 10) + 10,
+    }
+  }
+  for (var i = 0; i < 100; i++) {
+    snowflakes[i] = {
+      x: Math.random() * (canvas.width + 100) - 100,
+      y: Math.random() * (-10 + 500) - 500,
+      speed: Math.random() * (3 - 1) + 1,
+      velocity: Math.random() * (100 - 1) + 1,
     }
   }
   requestAnimationFrame(animate);
@@ -757,6 +785,19 @@ function animate() {
     }
   }
 
+  if (lastWeather === "snowy" && gameState.weather !== "snowy") {
+    snowflakes = [];
+  } else if (gameState.weather === "snowy" && lastWeather !== "snowy") {
+    for (var i = 0; i < 100; i++) {
+      snowflakes[i] = {
+        x: Math.random() * (canvas.width + 100) - 100,
+        y: Math.random() * (-10 + 500) - 500,
+        speed: Math.random() * (3 - 1) + 1,
+        velocity: Math.random() * (100 - 1) + 1,
+      }
+    }
+  }
+
   if (gameState.weather === "sunny") {
     darkness += 0.2 * (0 - darkness);
     ctx.beginPath();
@@ -781,6 +822,18 @@ function animate() {
     ctx.globalCompositeOperation = "source-over";
     for (var i = 0; i < raindrops.length; i++) {
       createRaindrop(raindrops[i]);
+    }
+  } else if (gameState.weather === "snowy") {
+    darkness += 0.2 * (0.3 - darkness);
+    ctx.beginPath();
+    ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = tinycolor("darkgray").darken(Math.abs(y) / 100).toString();
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.globalCompositeOperation = "source-over";
+    for (var i = 0; i < snowflakes.length; i++) {
+      createSnowflake(snowflakes[i]);
     }
   } else {
     darkness += 0.2 * (0 - darkness);

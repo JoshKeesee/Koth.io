@@ -28,8 +28,11 @@ var currUserName = 0;
 var playerNum = 0;
 const port = process.env.PORT || 3000;
 var regen;
+var render;
 var myId;
-var weather = ["sunny", "rainy"];
+var gameData;
+var weather = ["sunny", "rainy", "sunny", "snowy"];
+const FPS = 50;
 
 app.use(express.static(__dirname + "/public"));
 app.use(favicon(__dirname + '/public/favicon.ico'));
@@ -56,6 +59,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (myId === socket.id) {
       clearInterval(regen);
+      clearInterval(render);
     }
     
     for (var i = 0; i < Object.keys(gameState.players).length; i++) {
@@ -112,10 +116,18 @@ io.on("connection", (socket) => {
     gameState.leaderboard[socket.id] = 0;
 
     switchColor(gameState.players[socket.id]);
+
+    if (socket.id === myId) {
+      setTimeout(() => {
+        render = setInterval(() => {
+          updatePlayer(gameData, socket);
+        }, 1000 / 60);
+      }, 1000 / FPS);
+    }
   });
 
   socket.on("playerMovement", (data) => {
-    updatePlayer(data, socket);
+    gameData = data;
   });
 
   socket.on("chat message", (message) => {
@@ -124,7 +136,7 @@ io.on("connection", (socket) => {
 
   setInterval(() => {
     socket.emit("state", gameState);
-  }, 1000 / 70);
+  }, 1000 / FPS);
 });
 
 setInterval(updateWeather, 30000);
