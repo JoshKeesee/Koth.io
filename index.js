@@ -51,8 +51,8 @@ io.on("connection", (socket) => {
   };
 
   regen = setInterval(() => {
-    if (gameState.players[socket.id].damage > 0) {
-      gameState.players[socket.id].damage -= gameState.players[socket.id].regen;
+    if (gameState.players[myId].damage > 0) {
+      gameState.players[myId].damage -= gameState.players[myId].regen;
     }
   }, 1000);
 
@@ -444,6 +444,16 @@ function updatePlayer(data, socket) {
   collision(player, playerMovement.platforms, playerMovement, socket);
 
   player.xVel *= defaults.resistance;
+  if (player.xVel > 100) {
+    player.xVel = 100;
+  } else if (player.xVel < -100) {
+    player.xVel = -100;
+  }
+  if (player.yVel > 100) {
+    player.yVel = 100;
+  } else if (player.yVel < -100) {
+    player.yVel = -100;
+  }
   player.y += player.yVel;
   player.x += player.xVel;
 
