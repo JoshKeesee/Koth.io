@@ -4,9 +4,12 @@ const badWords = [
   "fuk",
   "ass",
   "bitch",
-  "negro",
   "nigger",
   "shit",
   "ash0le",
   "asshole",
+  "porn",
+  "sex",
+  "twerk",
+  "hump",
 ];
