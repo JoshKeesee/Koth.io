@@ -28,11 +28,11 @@ var currUserName = 0;
 var playerNum = 0;
 const port = process.env.PORT || 3000;
 var regen;
-var render;
 var myId;
-var gameData;
+var gameData = 0;
 var weather = ["sunny", "rainy", "sunny", "snowy"];
-const FPS = 50;
+const FPS = 40;
+const maxSpeed = 50;
 
 app.use(express.static(__dirname + "/public"));
 app.use(favicon(__dirname + '/public/favicon.ico'));
@@ -48,20 +48,10 @@ io.on("connection", (socket) => {
     damage: 0,
     name: null,
     lt: null,
+    lastloop: 0,
   };
 
-  regen = setInterval(() => {
-    if (gameState.players[myId].damage > 0) {
-      gameState.players[myId].damage -= gameState.players[myId].regen;
-    }
-  }, 1000);
-
   socket.on("disconnect", () => {
-    if (myId === socket.id) {
-      clearInterval(regen);
-      clearInterval(render);
-    }
-    
     for (var i = 0; i < Object.keys(gameState.players).length; i++) {
       if (gameState.players[Object.keys(gameState.players)[i]].lt === socket.id) {
         gameState.players[Object.keys(gameState.players)[i]].lt = null;
@@ -111,23 +101,17 @@ io.on("connection", (socket) => {
       knockback: 1,
       touching: false,
       color: "#0095DD",
+      lastloop: 0,
     };
 
     gameState.leaderboard[socket.id] = 0;
 
     switchColor(gameState.players[socket.id]);
-
-    if (socket.id === myId) {
-      setTimeout(() => {
-        render = setInterval(() => {
-          updatePlayer(gameData, socket);
-        }, 1000 / 60);
-      }, 1000 / FPS);
-    }
   });
 
   socket.on("playerMovement", (data) => {
     gameData = data;
+    updatePlayer(gameData, socket);
   });
 
   socket.on("chat message", (message) => {
@@ -147,6 +131,12 @@ function updateWeather() {
     io.emit("rain");
   } else {
     io.emit("no rain");
+  }
+
+  if (gameState.weather === "snowy") {
+    io.emit("snow");
+  } else {
+    io.emit("no snow");
   }
 }
 
@@ -269,7 +259,7 @@ function collision(player, platforms, playerMovement, socket) {
         } else {
           if (player.yVel >= 20) {
             socket.emit("hit");
-            player.damage += Math.ceil(player.yVel / 2);
+            player.damage += Math.ceil(player.yVel);
             player.color = "red";
             setTimeout(() => {
               switchColor(player);
@@ -375,113 +365,126 @@ function collision(player, platforms, playerMovement, socket) {
 }
 
 function updatePlayer(data, socket) {
-  var playerMovement = data[0];
-
-  defaults = {
-    gravity: 0.4,
-    resistance: 0.9,
-    speed: data[1].speed,
-    maxJumps: data[1].jumps,
-    jumpForce: 15
-  };
-
-  const player = gameState.players[socket.id];
-  player.speed = data[2];
-  player.pushForce = data[1].force;
-  player.regen = data[1].regen;
-  player.touching = false;
-
-  if (playerMovement.l) {
-    player.xVel -= defaults.speed;
-  }
-
-  if (playerMovement.r) {
-    player.xVel += defaults.speed;
-  }
-
-  if (playerMovement.d) {
-    if (!playerMovement.flying) {
-      player.h += 0.2 * (35 - player.h);
-      player.w += 0.2 * (90 - player.w);
-      defaults.speed = player.speed + 0.1;
-      defaults.gravity = 0.6;
+  if (data !== 0) {
+    var playerMovement = data[0];
+  
+    defaults = {
+      gravity: 0.4,
+      resistance: 0.9,
+      speed: data[1].speed,
+      maxJumps: data[1].jumps,
+      jumpForce: 15
+    };
+  
+    const player = gameState.players[socket.id];
+    player.speed = data[2];
+    player.pushForce = data[1].force;
+    player.regen = data[1].regen;
+    player.touching = false;
+  
+    if (playerMovement.l) {
+      player.xVel -= defaults.speed;
     }
-  } else {
+  
+    if (playerMovement.r) {
+      player.xVel += defaults.speed;
+    }
+  
+    if (playerMovement.d) {
+      if (!playerMovement.flying) {
+        player.h += 0.2 * (35 - player.h);
+        player.w += 0.2 * (90 - player.w);
+        defaults.speed = player.speed + 0.1;
+        defaults.gravity = 0.6;
+      }
+    } else {
+      if (!playerMovement.flying) {
+        player.h += 0.2 * (70 - player.h);
+        player.w += 0.2 * (70 - player.w);
+        defaults.speed = player.speed;
+        defaults.gravity = 0.4;
+      }
+    }
+  
+    if (!playerMovement.u || player.yVel == 0) {
+      player.jumping = false;
+    }
+  
+    if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping && !playerMovement.flying) {
+      player.jumping = true;
+      player.jumps++;
+      player.yVel = -defaults.jumpForce;
+    }
+  
     if (!playerMovement.flying) {
+      player.yVel += defaults.gravity;
+    }
+  
+    if (playerMovement.flying && playerMovement.u) {
+      player.yVel -= player.speed;
+    }
+  
+    if (playerMovement.flying && playerMovement.d) {
+      player.yVel += player.speed;
+    }
+  
+    if (playerMovement.flying) {
+      player.yVel *= defaults.resistance;
       player.h += 0.2 * (70 - player.h);
       player.w += 0.2 * (70 - player.w);
-      defaults.speed = player.speed;
-      defaults.gravity = 0.4;
     }
-  }
-
-  if (!playerMovement.u || player.yVel == 0) {
-    player.jumping = false;
-  }
-
-  if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping && !playerMovement.flying) {
-    player.jumping = true;
-    player.jumps++;
-    player.yVel = -defaults.jumpForce;
-  }
-
-  if (!playerMovement.flying) {
-    player.yVel += defaults.gravity;
-  }
-
-  if (playerMovement.flying && playerMovement.u) {
-    player.yVel -= player.speed;
-  }
-
-  if (playerMovement.flying && playerMovement.d) {
-    player.yVel += player.speed;
-  }
-
-  if (playerMovement.flying) {
-    player.yVel *= defaults.resistance;
-  }
-
-  collision(player, playerMovement.platforms, playerMovement, socket);
-
-  player.xVel *= defaults.resistance;
-  if (player.xVel > 100) {
-    player.xVel = 100;
-  } else if (player.xVel < -100) {
-    player.xVel = -100;
-  }
-  if (player.yVel > 100) {
-    player.yVel = 100;
-  } else if (player.yVel < -100) {
-    player.yVel = -100;
-  }
-  player.y += player.yVel;
-  player.x += player.xVel;
-
-  var playerNums = [];
-
-  for (var i = 0; i < Object.keys(gameState.players).length; i++) {
-    playerNums[i] = gameState.players[Object.keys(gameState.players)[i]].num;
-  }
-
-  playerNums.sort();
-
-  if (playerNum - 1 !== 0) {
-    if (playerNums[0] === playerNum && playerNums[0] > 1) {
-      playerNum--;
-      player.num = playerNum;
-    } else if (playerNums[playerNum - 2] < playerNum - 1) {
-      playerNum--;
-      player.num = playerNum;
+  
+    collision(player, playerMovement.platforms, playerMovement, socket);
+  
+    player.xVel *= defaults.resistance;
+    if (player.xVel > maxSpeed) {
+      player.xVel = maxSpeed;
+    } else if (player.xVel < -maxSpeed) {
+      player.xVel = -maxSpeed;
     }
-  }
+    if (player.yVel > maxSpeed) {
+      player.yVel = maxSpeed;
+    } else if (player.yVel < -maxSpeed) {
+      player.yVel = -maxSpeed;
+    }
+    player.y += player.yVel;
+    player.x += player.xVel;
+  
+    var playerNums = [];
+  
+    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+      playerNums[i] = gameState.players[Object.keys(gameState.players)[i]].num;
+    }
+  
+    playerNums.sort();
+  
+    if (playerNum - 1 !== 0) {
+      if (playerNums[0] === playerNum && playerNums[0] > 1) {
+        playerNum--;
+        player.num = playerNum;
+      } else if (playerNums[playerNum - 2] < playerNum - 1) {
+        playerNum--;
+        player.num = playerNum;
+      }
+    }
+  
+    if (player.name === "A Cheater Using Hacks") {
+      gameState.leaderboard[socket.id] = 0;
+    }
+  
+    if (player.damage >= 100) {
+      socket.emit("respawn");
+      respawn(player);
+    }
 
-  if (player.name === "A Cheater Using Hacks") {
-    gameState.leaderboard[socket.id] = 0;
-  }
+    if (gameState.players[socket.id].damage > 0 && new Date() - gameState.players[socket.id].lastloop >= 1000) {
+      gameState.players[socket.id].damage -= gameState.players[socket.id].regen;
+      gameState.players[socket.id].lastloop = new Date();
 
-  if (player.damage >= 100) {
-    socket.emit("respawn");
-    respawn(player);
+      if (gameState.players[socket.id].damage < 0) {
+        gameState.players[socket.id].damage = 0;
+      }
+    }
   }
 }
 

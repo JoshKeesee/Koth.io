@@ -1,3 +1,5 @@
+var rgx = new RegExp(badWords.join("|"), "gi");
+
 function enableChat() {
   document.getElementById("chatWindow").classList.replace("-left-full", "left-0");
   document.getElementById("notification").classList.add("hidden");
@@ -18,7 +20,9 @@ function disableChat() {
 
 document.getElementById("input").addEventListener("keydown", (e) => {
   if (e.key == "Enter" && connected) {
-    socket.emit("chat message", document.getElementById("input").value);
+    var message = document.getElementById("input").value;
+    message = message.replace(rgx, "****");
+    socket.emit("chat message", message);
     document.getElementById("input").value = "";
   }
   e.preventDefault;

@@ -22,7 +22,7 @@ const updateEachSecond = 0.5;
 const decimalPlacesRatio = Math.pow(10, decimalPlaces);
 var timeMeasurements = [];
 var fps = 0;
-const FPS = 50;
+const FPS = 60;
 const dirt = new Image();
 dirt.src = "/images/dirt.jpg";
 var dirtPattern;
@@ -46,6 +46,10 @@ var darkness = 0;
 var rain = new Audio("/music/Rain.mp3");
 rain.volume = 0.7;
 rain.loop = true;
+var snow = new Audio("/music/Snow.mp3");
+snow.volume = 0.5;
+snow.loop = true;
+var rgx = new RegExp(badWords.join("|"), "gi");
 document.getElementById("name").value = localStorage.getItem("name") || "";
 
 const playerMovement = {
@@ -525,15 +529,16 @@ function drawMap() {
   createObject(100, 500, 400, 1000, "ground");
   createObject(700, 500, 400, 1000, "ground");
   createObject(1400, 500, 700, 1000, "ground");
-  createObject(-850, 150, 120, 50, "platform", "red");
-  createObject(-500, -150, 120, 50, "platform", "yellow");
-  createObject(-850, -400, 120, 50, "platform", "blue");
+  createObject(-1000, 150, 120, 50, "platform", "red");
+  createObject(-750, -150, 120, 50, "platform", "yellow");
+  createObject(-1000, -400, 120, 50, "platform", "blue");
   createObject(-2500, -400, 300, 1400, "ground");
   createObject(-2500, -500, 1300, 200, "ground");
   createObject(-2200, 10, 1000, 990, "ground");
   createObject(-2000, -700, 120, 50, "platform", "yellow");
   createObject(-1600, -700, 120, 50, "platform", "red");
   createObject(-220, 350, 120, 50, "platform", "green");
+  createObject(-600, 200, 120, 50, "platform", "indigo");
   createObject(200, 250, 100, 50, "platform", "yellow");
   createObject(550, 250, 100, 50, "platform", "green");
   createObject(900, 250, 100, 50, "platform", "red");
@@ -573,7 +578,6 @@ function go() {
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("disconnected").classList.add("hidden");
   var name = document.getElementById("name").value;
-  localStorage.setItem("name", name);
   document.getElementById("gameMusic").play();
   gameStarted = true;
 
@@ -581,7 +585,7 @@ function go() {
   defaults.jumps = 1;
   defaults.padding = 1;
   defaults.force = 2;
-  defaults.regen = 1;
+  defaults.regen = 2;
 
   if (document.getElementById("speed").classList.contains("-translate-y-2")) {
     defaults.speed = 1.5;
@@ -590,7 +594,7 @@ function go() {
   } else if (document.getElementById("force").classList.contains("-translate-y-2")) {
     defaults.force = 4;
   } else if (document.getElementById("regen").classList.contains("-translate-y-2")) {
-    defaults.regen = 5;
+    defaults.regen = 6;
   }
 
   speed = defaults.speed;
@@ -599,6 +603,10 @@ function go() {
     devMode = true;
     name = "Koth Admin";
   }
+
+  name = name.replace(rgx, returnRandomName());
+
+  localStorage.setItem("name", name);
   
   socket.emit("newPlayer", name);
 }
@@ -654,6 +662,15 @@ socket.on("rain", () => {
 socket.on("no rain", () => {
   rain.currentTime = 0;
   rain.pause();
+});
+
+socket.on("snow", () => {
+  snow.play();
+});
+
+socket.on("no snow", () => {
+  snow.currentTime = 0;
+  snow.pause();
 });
 
 function choose(powerup) {
@@ -799,7 +816,7 @@ function animate() {
   }
 
   if (gameState.weather === "sunny") {
-    darkness += 0.2 * (0 - darkness);
+    darkness += 0.1 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
     ctx.fillStyle = "yellow";
@@ -812,7 +829,7 @@ function animate() {
     ctx.fill();
     ctx.closePath();
   } else if (gameState.weather === "rainy") {
-    darkness += 0.2 * (0.5 - darkness);
+    darkness += 0.1 * (0.5 - darkness);
     ctx.beginPath();
     ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = tinycolor("darkgray").darken(Math.abs(y) / 100).toString();
@@ -824,7 +841,7 @@ function animate() {
       createRaindrop(raindrops[i]);
     }
   } else if (gameState.weather === "snowy") {
-    darkness += 0.2 * (0.3 - darkness);
+    darkness += 0.1 * (0.3 - darkness);
     ctx.beginPath();
     ctx.rect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = tinycolor("darkgray").darken(Math.abs(y) / 100).toString();
@@ -836,7 +853,7 @@ function animate() {
       createSnowflake(snowflakes[i]);
     }
   } else {
-    darkness += 0.2 * (0 - darkness);
+    darkness += 0.1 * (0 - darkness);
     ctx.beginPath();
     ctx.roundRect(-100, -100 + (-y / 50), 300, 300, 500);
     ctx.fillStyle = "yellow";
@@ -874,4 +891,8 @@ var object = ["Taco", "Sphere", "Watermelon", "Cheeseburger", "Spider", "Dragon"
 
 function generateName() {
  document.getElementById("name").value = adjective[Math.floor(Math.random() * adjective.length)] + object[Math.floor(Math.random() * object.length)];
+}
+
+function returnRandomName() {
+  return adjective[Math.floor(Math.random() * adjective.length)] + object[Math.floor(Math.random() * object.length)];
 }
