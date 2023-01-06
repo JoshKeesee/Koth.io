@@ -8,17 +8,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JoshKeesee/Koth.IO.git"
+    "url": "git+https://github.com/JoshKeesee/Koth.io.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/JoshKeesee/Koth.IO/issues"
+    "url": "https://github.com/JoshKeesee/Koth.io/issues"
   },
-  "homepage": "https://github.com/JoshKeesee/Koth.IO#readme",
+  "homepage": "https://github.com/JoshKeesee/Koth.io#readme",
   "dependencies": {
     "@socket.io/admin-ui": "^0.5.1",
+    "bad-words": "^3.0.4",
     "express": "^4.18.2",
     "serve-favicon": "^2.5.0",
     "socket.io": "^4.5.4"

@@ -22,7 +22,6 @@ const updateEachSecond = 0.5;
 const decimalPlacesRatio = Math.pow(10, decimalPlaces);
 var timeMeasurements = [];
 var fps = 0;
-const FPS = 60;
 const dirt = new Image();
 dirt.src = "/images/dirt.jpg";
 var dirtPattern;
@@ -49,8 +48,8 @@ rain.loop = true;
 var snow = new Audio("/music/Snow.mp3");
 snow.volume = 0.5;
 snow.loop = true;
-var rgx = new RegExp(badWords.join("|"), "gi");
 document.getElementById("name").value = localStorage.getItem("name") || "";
+choose(localStorage.getItem("powerup") || "speed");
 
 const playerMovement = {
   u: false,
@@ -307,7 +306,7 @@ socket.on("disconnect", () => {
 });
 
 function sendData() {
-  socket.emit("playerMovement", [playerMovement, defaults, speed]);
+  socket.emit("playerMovement", [playerMovement, defaults, speed, fps]);
 }
 
 document.addEventListener("keydown", keyDownHandler, false);
@@ -604,14 +603,12 @@ function go() {
     name = "Koth Admin";
   }
 
-  name = name.replace(rgx, returnRandomName());
-
   localStorage.setItem("name", name);
   
   socket.emit("newPlayer", name);
 }
 
-socket.on("state", (state) => {
+socket.on("state", async (state) => {
   gameState = state;
 
   timeMeasurements.push(performance.now());
@@ -681,10 +678,11 @@ function choose(powerup) {
   document.getElementById(powerup).classList.add("-translate-y-2");
   var click = new Audio("/music/click.mp3");
   click.play();
+  localStorage.setItem("powerup", powerup);
 }
 
-setInterval(sendData, 1000 / FPS);
 window.onload = () => {
+  setInterval(sendData, 1000 / 60);
   ctx.canvas.width = window.innerWidth;
   ctx.canvas.height = window.innerHeight;
   for (var i = 0; i < 10; i++) {

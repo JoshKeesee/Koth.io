@@ -10,7 +10,7 @@ const io = new Server(httpServer, {
     origin: ["https://admin.socket.io"],
     credentials: true
   },
-  maxHttpBufferSize: 1e6
+  maxHttpBufferSize: 7e6
 });
 
 instrument(io, {
@@ -27,12 +27,12 @@ var defaults = {};
 var currUserName = 0;
 var playerNum = 0;
 const port = process.env.PORT || 3000;
-var regen;
 var myId;
-var gameData = 0;
 var weather = ["sunny", "rainy", "sunny", "snowy"];
-const FPS = 40;
-const maxSpeed = 50;
+var FPS = 20;
+const maxSpeed = 60;
+var Filter = require("bad-words"), filter = new Filter();
+var customFilter = new Filter({ placeHolder: "*"});
 
 app.use(express.static(__dirname + "/public"));
 app.use(favicon(__dirname + '/public/favicon.ico'));
@@ -63,6 +63,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("newPlayer", (name) => {
+    name = customFilter.clean(name);
     if (name === "") {
       currUserName = "Player " + (Object.keys(gameState.leaderboard).length + 1);
     } else {
@@ -110,17 +111,151 @@ io.on("connection", (socket) => {
   });
 
   socket.on("playerMovement", (data) => {
-    gameData = data;
-    updatePlayer(gameData, socket);
+    setTimeout(() => {
+      updatePlayer(data);
+    }, 0);
+    
+    FPS = data[3];
+    if (FPS.toString() !== "Infinity") {
+      setTimeout(() => {
+        socket.emit("state", gameState);
+      }, 1000 / FPS);
+    } else {
+      setTimeout(() => {
+        socket.emit("state", gameState);
+      }, 1000 / 60);
+    }
   });
 
   socket.on("chat message", (message) => {
-    io.emit("newMessage", [gameState.players[socket.id].name, message]);
+    io.emit("newMessage", [gameState.players[socket.id].name, customFilter.clean(message)]);
   });
 
-  setInterval(() => {
-    socket.emit("state", gameState);
-  }, 1000 / FPS);
+  socket.emit("state", gameState);
+
+  function updatePlayer(data) {
+    if (data !== 0) {
+      var playerMovement = data[0];
+    
+      defaults = {
+        gravity: 0.4,
+        resistance: 0.9,
+        speed: data[1].speed,
+        maxJumps: data[1].jumps,
+        jumpForce: 15
+      };
+    
+      const player = gameState.players[socket.id];
+      player.speed = data[2];
+      player.pushForce = data[1].force;
+      player.regen = data[1].regen;
+      player.touching = false;
+    
+      if (playerMovement.l) {
+        player.xVel -= defaults.speed;
+      }
+    
+      if (playerMovement.r) {
+        player.xVel += defaults.speed;
+      }
+    
+      if (playerMovement.d) {
+        if (!playerMovement.flying) {
+          player.h += 0.2 * (35 - player.h);
+          player.w += 0.2 * (90 - player.w);
+          defaults.speed = player.speed + 0.1;
+          defaults.gravity = 0.8;
+        }
+      } else {
+        if (!playerMovement.flying) {
+          player.h += 0.2 * (70 - player.h);
+          player.w += 0.2 * (70 - player.w);
+          defaults.speed = player.speed;
+          defaults.gravity = 0.4;
+        }
+      }
+    
+      if (!playerMovement.u || player.yVel == 0) {
+        player.jumping = false;
+      }
+    
+      if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping && !playerMovement.flying) {
+        player.jumping = true;
+        player.jumps++;
+        player.yVel = -defaults.jumpForce;
+      }
+    
+      if (!playerMovement.flying) {
+        player.yVel += defaults.gravity;
+      }
+    
+      if (playerMovement.flying && playerMovement.u) {
+        player.yVel -= player.speed;
+      }
+    
+      if (playerMovement.flying && playerMovement.d) {
+        player.yVel += player.speed;
+      }
+    
+      if (playerMovement.flying) {
+        player.yVel *= defaults.resistance;
+        player.h += 0.2 * (70 - player.h);
+        player.w += 0.2 * (70 - player.w);
+      }
+    
+      collision(player, playerMovement.platforms, playerMovement, socket);
+    
+      player.xVel *= defaults.resistance;
+      if (player.xVel > maxSpeed) {
+        player.xVel = maxSpeed;
+      } else if (player.xVel < -maxSpeed) {
+        player.xVel = -maxSpeed;
+      }
+      if (player.yVel > maxSpeed) {
+        player.yVel = maxSpeed;
+      } else if (player.yVel < -maxSpeed) {
+        player.yVel = -maxSpeed;
+      }
+      player.y += player.yVel;
+      player.x += player.xVel;
+    
+      var playerNums = [];
+    
+      for (var i = 0; i < Object.keys(gameState.players).length; i++) {
+        playerNums[i] = gameState.players[Object.keys(gameState.players)[i]].num;
+      }
+    
+      playerNums.sort();
+    
+      if (playerNum - 1 !== 0) {
+        if (playerNums[0] === playerNum && playerNums[0] > 1) {
+          playerNum--;
+          player.num = playerNum;
+        } else if (playerNums[playerNum - 2] < playerNum - 1) {
+          playerNum--;
+          player.num = playerNum;
+        }
+      }
+    
+      if (player.name === "A Cheater Using Hacks") {
+        gameState.leaderboard[socket.id] = 0;
+      }
+    
+      if (player.damage >= 100) {
+        socket.emit("respawn");
+        respawn(player);
+      }
+  
+      if (gameState.players[socket.id].damage > 0 && new Date() - gameState.players[socket.id].lastloop >= 1000) {
+        gameState.players[socket.id].damage -= gameState.players[socket.id].regen;
+        gameState.players[socket.id].lastloop = new Date();
+  
+        if (gameState.players[socket.id].damage < 0) {
+          gameState.players[socket.id].damage = 0;
+        }
+      }
+    }
+  }
 });
 
 setInterval(updateWeather, 30000);
@@ -359,130 +494,6 @@ function collision(player, platforms, playerMovement, socket) {
           player.y = platforms[i].t + platforms[i].h + 0.2;
           player.yVel = 1;
         }
-      }
-    }
-  }
-}
-
-function updatePlayer(data, socket) {
-  if (data !== 0) {
-    var playerMovement = data[0];
-  
-    defaults = {
-      gravity: 0.4,
-      resistance: 0.9,
-      speed: data[1].speed,
-      maxJumps: data[1].jumps,
-      jumpForce: 15
-    };
-  
-    const player = gameState.players[socket.id];
-    player.speed = data[2];
-    player.pushForce = data[1].force;
-    player.regen = data[1].regen;
-    player.touching = false;
-  
-    if (playerMovement.l) {
-      player.xVel -= defaults.speed;
-    }
-  
-    if (playerMovement.r) {
-      player.xVel += defaults.speed;
-    }
-  
-    if (playerMovement.d) {
-      if (!playerMovement.flying) {
-        player.h += 0.2 * (35 - player.h);
-        player.w += 0.2 * (90 - player.w);
-        defaults.speed = player.speed + 0.1;
-        defaults.gravity = 0.6;
-      }
-    } else {
-      if (!playerMovement.flying) {
-        player.h += 0.2 * (70 - player.h);
-        player.w += 0.2 * (70 - player.w);
-        defaults.speed = player.speed;
-        defaults.gravity = 0.4;
-      }
-    }
-  
-    if (!playerMovement.u || player.yVel == 0) {
-      player.jumping = false;
-    }
-  
-    if (playerMovement.u && player.jumps < defaults.maxJumps && !player.jumping && !playerMovement.flying) {
-      player.jumping = true;
-      player.jumps++;
-      player.yVel = -defaults.jumpForce;
-    }
-  
-    if (!playerMovement.flying) {
-      player.yVel += defaults.gravity;
-    }
-  
-    if (playerMovement.flying && playerMovement.u) {
-      player.yVel -= player.speed;
-    }
-  
-    if (playerMovement.flying && playerMovement.d) {
-      player.yVel += player.speed;
-    }
-  
-    if (playerMovement.flying) {
-      player.yVel *= defaults.resistance;
-      player.h += 0.2 * (70 - player.h);
-      player.w += 0.2 * (70 - player.w);
-    }
-  
-    collision(player, playerMovement.platforms, playerMovement, socket);
-  
-    player.xVel *= defaults.resistance;
-    if (player.xVel > maxSpeed) {
-      player.xVel = maxSpeed;
-    } else if (player.xVel < -maxSpeed) {
-      player.xVel = -maxSpeed;
-    }
-    if (player.yVel > maxSpeed) {
-      player.yVel = maxSpeed;
-    } else if (player.yVel < -maxSpeed) {
-      player.yVel = -maxSpeed;
-    }
-    player.y += player.yVel;
-    player.x += player.xVel;
-  
-    var playerNums = [];
-  
-    for (var i = 0; i < Object.keys(gameState.players).length; i++) {
-      playerNums[i] = gameState.players[Object.keys(gameState.players)[i]].num;
-    }
-  
-    playerNums.sort();
-  
-    if (playerNum - 1 !== 0) {
-      if (playerNums[0] === playerNum && playerNums[0] > 1) {
-        playerNum--;
-        player.num = playerNum;
-      } else if (playerNums[playerNum - 2] < playerNum - 1) {
-        playerNum--;
-        player.num = playerNum;
-      }
-    }
-  
-    if (player.name === "A Cheater Using Hacks") {
-      gameState.leaderboard[socket.id] = 0;
-    }
-  
-    if (player.damage >= 100) {
-      socket.emit("respawn");
-      respawn(player);
-    }
-
-    if (gameState.players[socket.id].damage > 0 && new Date() - gameState.players[socket.id].lastloop >= 1000) {
-      gameState.players[socket.id].damage -= gameState.players[socket.id].regen;
-      gameState.players[socket.id].lastloop = new Date();
-
-      if (gameState.players[socket.id].damage < 0) {
-        gameState.players[socket.id].damage = 0;
       }
     }
   }
