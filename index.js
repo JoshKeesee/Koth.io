@@ -31,8 +31,7 @@ var myId;
 var weather = ["sunny", "rainy", "sunny", "snowy"];
 var FPS = 20;
 const maxSpeed = 60;
-var Filter = require("bad-words"), filter = new Filter();
-var customFilter = new Filter({ placeHolder: "*"});
+var badWords = require("badwords-list").regex;
 
 app.use(express.static(__dirname + "/public"));
 app.use(favicon(__dirname + '/public/favicon.ico'));
@@ -63,7 +62,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("newPlayer", (name) => {
-    name = customFilter.clean(name);
+    name = name.replace(badWords, t => {
+				let r = "";
+				t.split("").forEach(() => r += "*");
+				return r;
+			});
     if (name === "") {
       currUserName = "Player " + (Object.keys(gameState.leaderboard).length + 1);
     } else {
@@ -128,7 +131,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("chat message", (message) => {
-    io.emit("newMessage", [gameState.players[socket.id].name, customFilter.clean(message)]);
+    io.emit("newMessage", [gameState.players[socket.id].name, message.replace(badWords, t => {
+			let r = "";
+			t.split("").forEach(() => r += "*");
+			return r;
+		})]);
   });
 
   socket.emit("state", gameState);
